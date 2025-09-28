@@ -38,7 +38,8 @@ GUI.screen_height = screen_height = settings["screen_height"]
 GUI.box_dim = int(GUI.screen_width * 0.1),int(GUI.screen_height * 0.1)
 grid_size=100
 cam_speed=5
-pygame.key.set_repeat(50, 10)  # 500ms delay before repeating, 50ms interval between repeats
+pygame.key.set_repeat(100, 100)  # 500ms delay before repeating, 50ms interval between repeats
+animation_clock = 0#used for animation that change over time
 
 #load screen
 def loading_screen(perc,text):
@@ -95,7 +96,7 @@ def draw_cell(x, y, gate_type, screen, camera_pos, font):
     world_y = y * grid_size - camera_pos[1]
     if 0 <= world_x < screen.get_width() and 0 <= world_y < screen.get_height():#only render cell if in view
         cell = pygame.Surface((grid_size,grid_size))
-        cell.fill((WHITE))
+        cell.fill((255,255,255))
         cell.blit((gate_img[gate_type]),(0,0))
         screen.blit(cell,(world_x, world_y))
         text = font.render(f"{x}:{y}", True, (0,0,0))
@@ -591,14 +592,12 @@ while True:
             
 
         # Load new obj in view and remove obj out of view
+        #range of cells in the x and y axis
         new_min_x = camera_pos[0] // GRID_SIZE 
         new_max_x = (camera_pos[0] + screen_width) // GRID_SIZE + 1
         new_min_y = camera_pos[1] // GRID_SIZE
         new_max_y = (camera_pos[1] + screen_height) // GRID_SIZE + 1
 
-        # check if the 2D array is larger or smaller than expected
-        
-        
         if new_min_x < min_x:  # Render 1 grid left
             #gates
             temp_list_obj = []
@@ -670,11 +669,12 @@ while True:
             min_y = new_min_y
             max_y = new_max_y
         elif new_max_y > max_y:  # Render 1 grid down
+            #gates
             for n in range(len(obj_in_view)):
                 obj = db.load_object(min_x + n, new_max_y - 1)
                 if obj:
                     obj_in_view[n].append(obj[2])
-                else:obj_in_view[n].insert(0, (None))
+                else:obj_in_view[n].append(None)
                 obj_in_view[n].pop(0)
             #interconnect
             for n in range(len(array_interconnect)):
@@ -791,14 +791,8 @@ while True:
         for col in obj_in_view:
             for obj in col:
                 if obj != None:
-                    try:
-                        #when placeing a gate 
-                        type = obj - 1  # Operation (0=AND, 1=OR, 2=NAND, 3=NOR)
-                        if 0 <= type < 7:
-                            draw_cell(x_column, y, type, screen, camera_pos, GRID_SIZE, font)
-                    except:
-                        pass
-                    
+                    #when placeing a gate 
+                    draw_cell(x_column, y, obj, screen, camera_pos, font)
             x_column += 1
 
         # starting points
