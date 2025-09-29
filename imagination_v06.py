@@ -37,9 +37,7 @@ GUI.screen_width = screen_width = settings["screen_width"]
 GUI.screen_height = screen_height = settings["screen_height"]
 GUI.box_dim = int(GUI.screen_width * 0.1),int(GUI.screen_height * 0.1)
 grid_size=100
-cam_speed=5
 pygame.key.set_repeat(100, 100)  # 500ms delay before repeating, 50ms interval between repeats
-animation_clock = 0#used for animation that change over time
 
 #load screen
 def loading_screen(perc,text):
@@ -120,11 +118,12 @@ def within_gate_option_menu_bool(mouse_pos, gate_option_menu_pos):
         return False
     return True
 
-def message(text, font,font_size, screen):
-    len(text)
-    font = pygame.font.SysFont(f"{font}", font_size)
-    screen.blit((font.render(f"{text}", True, (255, 255, 255))),(screen_width - (len(text)*font_size), screen_height * 0.7))
-
+def message(text,duration):#duration is in seconds
+    for message_text,message_duration in message_queue:
+        if text == message_text:
+            return None
+    message_queue.append([text,duration*settings["fps"]])
+    
 def slot_coord(x,y,slot_code):#only used to render interconnect path
     if slot_code == 0:
         slot_x = x * grid_size - camera_pos[0] + (grid_size/4)
@@ -223,11 +222,6 @@ selected_table = ""
 loading_screen(60,"Setup Project and Database")
 
 # Colors
-GREEN = (125, 255, 125)  # AND gate
-BLUE = (125, 125, 255)   # OR gate
-RED = (255, 0, 0)        # NAND gate
-PURPLE = (255, 0, 255)   # NOR gate
-ORANGE = (255, 155, 0)   # interconnects
 WHITE = (255, 255, 255)
 navy = (0,50,255)
 gold = (255,215,0)
@@ -235,10 +229,10 @@ gold = (255,215,0)
 
 loading_screen(70,"loaded colours")
 
-# Grid and Camera Settings
-GRID_SIZE = 100
+# message qeue Camera Settings
+message_queue = []
 camera_pos = [0, 0]
-CAM_SPEED = 5
+cam_speed = 5
 
 loading_screen(80,"loaded Grid and Camera Settings")
 
@@ -405,10 +399,10 @@ while True:
     obj_in_view = []  # Store obj that are in view to improve performance
     SP_in_view = [] #stores starting points in view to improve performance
     action_queue = []#used to store user action for undo functionality
-    min_x = camera_pos[0] // GRID_SIZE
-    max_x = (camera_pos[0] + screen_width) // GRID_SIZE + 1
-    min_y = camera_pos[1] // GRID_SIZE
-    max_y = (camera_pos[1] + screen_height) // GRID_SIZE + 1
+    min_x = camera_pos[0] // grid_size
+    max_x = (camera_pos[0] + screen_width) // grid_size + 1
+    min_y = camera_pos[1] // grid_size
+    max_y = (camera_pos[1] + screen_height) // grid_size + 1
     for x in range(min_x, max_x):
         temp_list = []  # List that contains all obj with the same x coord
         for y in range(min_y, max_y):
@@ -460,18 +454,18 @@ while True:
         
         # Camera Movement
         dx, dy = 0, 0
-        if keys[pygame.K_w]: dy -= CAM_SPEED
-        if keys[pygame.K_s]: dy += CAM_SPEED
-        if keys[pygame.K_a]: dx -= CAM_SPEED
-        if keys[pygame.K_d]: dx += CAM_SPEED
+        if keys[pygame.K_w]: dy -= cam_speed
+        if keys[pygame.K_s]: dy += cam_speed
+        if keys[pygame.K_a]: dx -= cam_speed
+        if keys[pygame.K_d]: dx += cam_speed
         camera_pos[0] += dx
         camera_pos[1] += dy 
 
         # Calculate mouse grid position
         world_x = mouse_pos[0] + camera_pos[0]
         world_y = mouse_pos[1] + camera_pos[1]
-        grid_x = world_x // GRID_SIZE
-        grid_y = world_y // GRID_SIZE
+        grid_x = world_x // grid_size
+        grid_y = world_y // grid_size
 
         #store what a cell contains when cursor is hovered over it
         if db.load_object(int(grid_x), int(grid_y)):
@@ -482,44 +476,51 @@ while True:
             in_cell = None
 
         # Mouse Interaction (Left Click)
-        if mouse_buttons[0]:  # select
-            if screen_height * 0.8 <= mouse_pos[1] <= screen_height * 0.8 + GRID_SIZE:
-                if screen_width * 0.1 <= mouse_pos[0] <= screen_width * 0.1 + GRID_SIZE:
+        if mouse_buttons[0]:  # select gate number- and:0 , or:1, nand:2, nor:3, xor:4, xnor:5, not:6
+            if screen_height * 0.8 <= mouse_pos[1] <= screen_height * 0.8 + grid_size:
+                if screen_width * 0.1 <= mouse_pos[0] <= screen_width * 0.1 + grid_size:
                     selected_gate = 0
                     selected_sp = second_click = first_click = selected_interconnect = False
-                elif screen_width * 0.2 <= mouse_pos[0] <= screen_width * 0.2 + GRID_SIZE:
+                    message("Picked up AND gate", 2)
+                elif screen_width * 0.2 <= mouse_pos[0] <= screen_width * 0.2 + grid_size:
                     selected_gate = 1
                     selected_sp = second_click = first_click = selected_interconnect = False
-                elif screen_width * 0.3 <= mouse_pos[0] <= screen_width * 0.3 + GRID_SIZE:
+                    message("Picked up OR gate", 2)
+                elif screen_width * 0.3 <= mouse_pos[0] <= screen_width * 0.3 + grid_size:
                     selected_gate = 2
                     selected_sp = second_click = first_click = selected_interconnect = False
-                elif screen_width * 0.4 <= mouse_pos[0] <= screen_width * 0.4 + GRID_SIZE:
+                    message("Picked up NAND gate", 2)
+                elif screen_width * 0.4 <= mouse_pos[0] <= screen_width * 0.4 + grid_size:
                     selected_gate = 3
                     selected_sp = second_click = first_click = selected_interconnect = False
-                elif screen_width * 0.5 <= mouse_pos[0] <= screen_width * 0.5 + GRID_SIZE:
+                    message("Picked up NOR gate", 2)
+                elif screen_width * 0.5 <= mouse_pos[0] <= screen_width * 0.5 + grid_size:
                     selected_gate = 4
                     selected_sp = second_click = first_click = selected_interconnect = False
-                    message("Picked up interconnect", font,font_size, screen)
-                elif screen_width * 0.6 <= mouse_pos[0] <= screen_width * 0.6 + GRID_SIZE:
+                    message("Picked up XOR gate", 2)
+                elif screen_width * 0.6 <= mouse_pos[0] <= screen_width * 0.6 + grid_size:
                     selected_gate = 5
                     selected_sp = second_click = first_click = selected_interconnect = False
-                elif screen_width * 0.7 <= mouse_pos[0] <= screen_width * 0.7 + GRID_SIZE:
+                    message("Picked up XNOR gate", 2)
+                elif screen_width * 0.7 <= mouse_pos[0] <= screen_width * 0.7 + grid_size:
                     selected_gate = 6
                     selected_sp = second_click = first_click = selected_interconnect = False
-                elif screen_width * 0.8 <= mouse_pos[0] <= screen_width * 0.8 + GRID_SIZE:
+                    message("Picked up NOT gate", 2)
+                elif screen_width * 0.8 <= mouse_pos[0] <= screen_width * 0.8 + grid_size:
                     selected_sp = second_click = first_click = False
                     selected_gate = None
                     selected_interconnect = True
-                elif screen_width * 0.9 <= mouse_pos[0] <= screen_width * 0.9 + GRID_SIZE:
+                    message("Picked up interconnect", 2)
+                elif screen_width * 0.9 <= mouse_pos[0] <= screen_width * 0.9 + grid_size:
                     second_click = first_click = selected_interconnect = False
                     selected_gate = None
                     selected_sp = True
-                    message("Picked up starting point", font,font_size, screen)
+                    message("Picked up starting point", 2)
             elif mouse_pos[1] < screen_height * 0.7:# place
                 if selected_gate != None and 0 <= selected_gate <= 7 and selected_interconnect == False and selected_sp == False:
                     if in_cell == None:
                         db.user_add_object( int(grid_x), int(grid_y), selected_gate)
-                        message(f"Placed gate {['AND', 'OR', 'NAND', 'NOR','XOR','XNOR','NOT'][selected_gate]} at ({grid_x}, {grid_y})", font,font_size, screen)
+                        message(f"Placed gate {['AND', 'OR', 'NAND', 'NOR','XOR','XNOR','NOT'][selected_gate]} at ({grid_x}, {grid_y})", 4)
                         selected_gate = None
                         # Update obj_in_view
                         for n, col in enumerate(obj_in_view):
@@ -527,28 +528,28 @@ while True:
                                 col.append(((grid_x, grid_y, selected_gate), grid_y))
                                 break
                     else:
-                        message(f"Spot ({grid_x}, {grid_y}) already occupied", font,font_size, screen)
+                        message(f"Spot ({grid_x}, {grid_y}) already occupied", 2)
                 # place interconnect
                 elif selected_interconnect == True and selected_gate == False and  selected_sp == False :
                     if in_cell == None:
-                        message("No gate at this position", font,font_size, screen)
+                        message("No gate at this position", 2)
                     else:
                         if not first_click:
                             first_click = True
                             in_gate_cord = grid_x, grid_y
-                            message("Selected input gate", font,font_size, screen)
+                            message("Selected input gate", 2)
                         elif grid_x == in_gate_cord[0] and grid_y == in_gate_cord[1]:
-                            message("Cannot connect gate to itself", font,font_size, screen)
+                            message("Cannot connect gate to itself", 2)
                         elif not second_click:
                             second_click = True
                             out_gate_cord = grid_x, grid_y
                             if db.search_if_connected(in_gate_cord[0], in_gate_cord[1], out_gate_cord[0], out_gate_cord[1]):
-                                message("Gates already connected", font,font_size, screen)
+                                message("Gates already connected", 2)
                             elif out_gate_cord[0] != in_gate_cord[0] and out_gate_cord[1] != in_gate_cord[1]:  # Fix: Straight line check
-                                message("Can only connect an interconnect in a straight line", font,font_size, screen)
+                                message("Can only connect an interconnect in a straight line", 4)
                             else:
                                 db.add_interconnect(in_gate_cord[0], in_gate_cord[1], out_gate_cord[0], out_gate_cord[1])
-                                message("Interconnect placed", font,font_size, screen)
+                                message("Interconnect placed", 2)
                             first_click = False
                             second_click = False
                             selected_interconnect = False
@@ -556,11 +557,11 @@ while True:
                 elif selected_sp and not selected_interconnect and selected_gate is None:
                     if in_cell is None:
                         db.add_starting_point( int(grid_x), int(grid_y))
-                        message(f"Placed starting point at ({grid_x}, {grid_y})", font,font_size, screen)
+                        message(f"Placed starting point at ({grid_x}, {grid_y})", 4)
                         SP_in_view.append((grid_x,grid_y))
                         selected_sp = False
                     else:
-                        message(f"Spot ({grid_x}, {grid_y}) already occupied", font,font_size, screen)
+                        message(f"Spot ({grid_x}, {grid_y}) already occupied", 4)
 
         # Right Click (Gate Option Menu)
         #issue: when removing a logic gate the application crashes
@@ -593,10 +594,10 @@ while True:
 
         # Load new obj in view and remove obj out of view
         #range of cells in the x and y axis
-        new_min_x = camera_pos[0] // GRID_SIZE 
-        new_max_x = (camera_pos[0] + screen_width) // GRID_SIZE + 1
-        new_min_y = camera_pos[1] // GRID_SIZE
-        new_max_y = (camera_pos[1] + screen_height) // GRID_SIZE + 1
+        new_min_x = camera_pos[0] // grid_size 
+        new_max_x = (camera_pos[0] + screen_width) // grid_size + 1
+        new_min_y = camera_pos[1] // grid_size
+        new_max_y = (camera_pos[1] + screen_height) // grid_size + 1
 
         if new_min_x < min_x:  # Render 1 grid left
             #gates
@@ -728,28 +729,28 @@ while True:
             if in_cell == "obj":
                 if gate_option_menu_pos[1] <= mouse_pos[1] < gate_option_menu_pos[1] + 30:
                     db.update_operation(selected_grid[0], selected_grid[1], 1)
-                    message("Changed to AND gate", font,font_size, screen)
+                    message("Changed to AND gate", 2)
                     gate_option_menu_bool = False
                     open_gate_option_menu_bool = True
                 elif gate_option_menu_pos[1] + 30 <= mouse_pos[1] < gate_option_menu_pos[1] + 60:
                     db.update_operation(selected_grid[0], selected_grid[1], 2)
-                    message("Changed to OR gate", font,font_size, screen)
+                    message("Changed to OR gate", 2)
                     gate_option_menu_bool = False
                     open_gate_option_menu_bool = True
                 elif gate_option_menu_pos[1] + 60 <= mouse_pos[1] < gate_option_menu_pos[1] + 90:
                     db.update_operation(selected_grid[0], selected_grid[1], 3)
-                    message("Changed to NAND gate", font,font_size, screen)
+                    message("Changed to NAND gate", 2)
                     gate_option_menu_bool = False
                     open_gate_option_menu_bool = True
                 elif gate_option_menu_pos[1] + 90 <= mouse_pos[1] < gate_option_menu_pos[1] + 120:
                     db.update_operation(selected_grid[0], selected_grid[1], 4)
-                    message("Changed to NOR gate", font,font_size, screen)
+                    message("Changed to NOR gate", 2)
                     gate_option_menu_bool = False
                     open_gate_option_menu_bool = True
                 elif gate_option_menu_pos[1] + 120 <= mouse_pos[1] < gate_option_menu_pos[1] + 150:
                         db.remove_object(selected_grid[0], selected_grid[1])
                         db.remove_interconnect(selected_grid[0], selected_grid[1])
-                        message("Gate removed", font,font_size, screen)
+                        message("Gate removed", 2)
                         gate_option_menu_bool = False
                         open_gate_option_menu_bool = True
                         # Update obj_in_view
@@ -779,11 +780,11 @@ while True:
 
         # Rendering
         # Grid
-        x_offset = camera_pos[0] % GRID_SIZE
-        y_offset = camera_pos[1] % GRID_SIZE
-        for x in range(-x_offset, screen_width + GRID_SIZE, GRID_SIZE):
+        x_offset = camera_pos[0] % grid_size
+        y_offset = camera_pos[1] % grid_size
+        for x in range(-x_offset, screen_width + grid_size, grid_size):
             pygame.draw.line(screen, WHITE, (x, 0), (x, screen_height))
-        for y in range(-y_offset, screen_height + GRID_SIZE, GRID_SIZE):
+        for y in range(-y_offset, screen_height + grid_size, grid_size):
             pygame.draw.line(screen, WHITE, (0, y), (screen_width, y))
 
         # Render gates
@@ -797,7 +798,7 @@ while True:
 
         # starting points
         for x,y in SP_in_view:
-            draw_sp(x,y,(255,255,0),screen,camera_pos, GRID_SIZE, pygame.font.SysFont('Arial', 20))
+            draw_sp(x,y,(255,255,0),screen,camera_pos, grid_size, pygame.font.SysFont('Arial', 20))
 
         # Render interconnects
         for col in array_interconnect:
@@ -805,7 +806,7 @@ while True:
                 if path == None: pass
                 elif len(path) == 2:
                     pygame.draw.line(screen,WHITE,path[0],path[1])
-                else: message("could not render interconnect",font,font_size,screen)
+                else: message("could not render interconnect",2)
 
         # Render the picked up gate relative to cursor
         if selected_gate:
@@ -821,11 +822,21 @@ while True:
                 screen.blit(font.render("Change to OR", True, (0, 0, 0)), (gate_option_menu_pos[0], gate_option_menu_pos[1] + 30))
                 screen.blit(font.render("Change to NAND", True, (0, 0, 0)), (gate_option_menu_pos[0], gate_option_menu_pos[1] + 60))
                 screen.blit(font.render("Change to NOR", True, (0, 0, 0)), (gate_option_menu_pos[0], gate_option_menu_pos[1] + 90))
-                screen.blit(font.render("Remove", True, RED), (gate_option_menu_pos[0], gate_option_menu_pos[1] + 120))
+                screen.blit(font.render("Remove", True, (255,0,0)), (gate_option_menu_pos[0], gate_option_menu_pos[1] + 120))
             elif in_cell == "sp":
                 pygame.draw.rect(screen, WHITE, (gate_option_menu_pos[0], gate_option_menu_pos[1], 150, 150))
                 screen.blit(font.render("Remove starting point", True, (0, 0, 0)), (gate_option_menu_pos[0], gate_option_menu_pos[1]))
                 screen.blit(font.render("Change state", True, (0, 0, 0)), (gate_option_menu_pos[0], gate_option_menu_pos[1] + 30))
+
+        #animation
+        if len(message_queue) > 0:
+            if message_queue[0][1] > 0:
+                message_queue[0][1] -= 1
+                screen.blit((font.render(f"{message_queue[0][0]}", True, (255, 255, 255))),(screen_width - (len(message_queue[0][0])*font_size), screen_height * 0.7-font_size))
+            else: 
+                message_queue.pop(0)#marks the end of animation
+                if len(message_queue) > 0:
+                    screen.blit((font.render(f"{message_queue[0][0]}", True, (255, 255, 255))),(screen_width - (len(message_queue[0][0])*font_size), screen_height * 0.7-font_size))
 
         screen.blit(UI_bar,(0,screen_height*0.7))
         pygame.display.flip()
