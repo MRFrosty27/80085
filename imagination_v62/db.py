@@ -53,7 +53,9 @@ def table_object_create():#creates the tables where the user will add components
             operation INTEGER
         )
     """
+    create_index = "CREATE INDEX index_cord ON main (X_cord,Y_cord)"
     db_name[1].execute(create_table_query)
+    db_name[1].execute(create_index)
     db_name[0].commit()
     #print("end: create table")#use fore debug
 
@@ -69,7 +71,9 @@ def table_interconnect_connect():#creates a mandatory table that defines how bit
         outslot INTEGER
     )
     """#slot: 0-top left, 1-top right, 2-bottom left, 3-bottom right
+    create_index = "CREATE INDEX index_cord ON main (inx,iny, outx, outy)"
     db_name[1].execute(query)
+    db_name[1].execute(create_index)
     db_name[0].commit()
     #print("end: create interconnect table")#use fore debug
 
@@ -116,7 +120,9 @@ def interconnect_add(inx,iny,outx,outy):
     inx ,
     iny ,
     outx ,
-    outy 
+    outy,
+    inslot INTEGER,
+    outslot INTEGER
     )
     VALUES (?,?,?,?)
     """
@@ -131,10 +137,10 @@ def object_add(X_cord,Y_cord,operation):#get called when a user adds a new gate
     db_name[1].execute(syntax,(X_cord, Y_cord, operation))
     db_name[0].commit()
 
-def object_load(X_cord,Y_cord):#gets called when GUI needs to know gate to display
+def object_load(X_cord,Y_cord):#gets called when GUI needs to know which gate to display
     db_name[1].execute(f"SELECT * FROM main WHERE X_cord = ? AND Y_cord = ?;", (X_cord, Y_cord))
     result = db_name[1].fetchone()
-    return result
+    return result[2]#output operation
 
 def object_update_cord(table,X_cord,Y_cord):#if the user moves gate to a diff pos
     update_X = f"""
@@ -145,25 +151,10 @@ def object_update_cord(table,X_cord,Y_cord):#if the user moves gate to a diff po
     db_name[1].execute(update_X,(X_cord,Y_cord))
     db_name[0].commit()
 
-def object_update_operation(X_cord,Y_cord,new_operation):#if a user replace gate with another on the same pos
-    query = f"""
-    update main
-    set operation = ?
-    where X_cord = ? AND Y_cord = ?;
-    """
-    db_name[1].execute(query,(new_operation,X_cord,Y_cord))
-    db_name[0].commit()
-
-def object_get__operation(table,ID):#used when simulation is being prepared.
-    db_name[1].execute(f"SELECT * FROM {table} WHERE ID = ?;", (ID))
-    result = db_name[1].fetchone()
-    return result[0]
-
 def object_search_connected(inx,iny):
     #seach if two gate have existing interconnect connected
     db_name[1].execute("SELECT * FROM interconnect WHERE inx = ? AND iny = ? OR outx = ? AND outy = ?;", (inx,iny,inx,iny))
-    if db_name[1].fetchone() is not None:
-        return True
+    return db_name[1].fetchone()
     
 def object_remove(x,y):
     db_name[1].execute(f"DELETE FROM main WHERE X_cord = ? AND Y_cord = ?;", (x,y))
