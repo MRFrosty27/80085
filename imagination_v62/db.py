@@ -59,8 +59,7 @@ def table_object_create():#creates the tables where the user will add components
     db_name[0].commit()
     #print("end: create table")#use fore debug
 
-def table_interconnect_connect():#creates a mandatory table that defines how bits travel
-    #print("start: create interconnect table")#use fore debug
+def table_interconnect_create():#creates a mandatory table that defines how bits travel
     query = f""" 
     CREATE TABLE IF NOT EXISTS interconnect (
         inx INTEGER,

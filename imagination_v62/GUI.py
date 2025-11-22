@@ -1,4 +1,5 @@
 import pygame
+from start import settings
 
 #the purpose of this file is to simplyfy UI design.
 
@@ -13,12 +14,20 @@ mpos = None
 text_font = 'Arial'
 text_size = screen_height* 0.05
 text = pygame.font.SysFont(text_font, text_size)
+message_queue = []
 
 def render_text(surface,text,x,y):
     if isinstance(text,str) == True:
         surface.blit((text).render(f"{text}",True,(0,0,0)),(x,y))
 
+def message(text,duration):#duration is in seconds
+    for message_text,message_duration in message_queue:
+        if text == message_text:
+            return None
+    message_queue.append([text,duration*settings["fps"]])
+
 class text_box:#used in main menu
+
     def __init__(self, x, y, text):
         # Type checking
         if not isinstance(x, int):
@@ -31,7 +40,8 @@ class text_box:#used in main menu
         self.x = x
         self.y = y
         self.text = text
-
+        
+    def render(self):
         # Set font and calculate text dimensions
         text_surface = text.render(text, True, (0, 0, 0))
         text_width, text_height = text.size(text)
@@ -55,7 +65,6 @@ class text_box:#used in main menu
             pygame.draw.rect(display, (255,215,0), (self.x, self.y, self.width, self.height), 5)
         else:
             pygame.draw.rect(display, (255,255,255), (self.x, self.y, self.width, self.height))
-        
         # Render text with padding
         display.blit(text_surface, (self.x + padding_x, self.y + y_padding))
 
@@ -79,6 +88,7 @@ class option_menu:
     def option_execute(self,index):
         exec(self.__num_options[1][index])
 
+#create option menus
 obj_option_menu = option_menu()
 obj_option_menu.option_add('Remove',"""
 db.object_remove(x,y)
@@ -87,3 +97,5 @@ interconnect_option_menu = option_menu()
 interconnect_option_menu.option_add('Remove',"""
 db.interconnect_remove(x,y)
 """)
+
+resolution = text_box(screen_width*0.1,screen_height*0.1,)

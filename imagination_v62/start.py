@@ -1,10 +1,4 @@
-import os, json
-import GUI
-
-# Set up display
-pygame.init()
-GUI.display = screen = pygame.display.set_mode((settings["screen_width"], settings["screen_height"]))
-clock = pygame.time.Clock()
+import os, json,GUI,pygame
 
 #create folder where database files are stored 
 os.makedirs(os.path.join(os.path.dirname(__file__),"projects"),exist_ok=True ) 
@@ -25,6 +19,11 @@ except FileNotFoundError:
     with open(SETTINGS_FILE, "w") as f:
         json.dump(DEFAULT_SETTINGS, f, indent=4)
     settings = DEFAULT_SETTINGS
+
+# Set up display
+pygame.init()
+GUI.display = screen = pygame.display.set_mode((settings["screen_width"], settings["screen_height"]))
+clock = pygame.time.Clock()
 
 # Initialize game state
 GUI.screen_width = screen_width = settings["screen_width"]
