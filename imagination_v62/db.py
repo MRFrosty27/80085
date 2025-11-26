@@ -70,7 +70,7 @@ def table_interconnect_create():#creates a mandatory table that defines how bits
         outslot INTEGER
     )
     """#slot: 0-top left, 1-top right, 2-bottom left, 3-bottom right
-    create_index = "CREATE INDEX index_cord ON main (inx,iny, outx, outy)"
+    create_index = "CREATE INDEX index_cord ON interconnect (inx,iny, outx, outy)"
     db_name[1].execute(query)
     db_name[1].execute(create_index)
     db_name[0].commit()

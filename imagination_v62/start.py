@@ -7,9 +7,7 @@ os.makedirs(os.path.join(os.path.dirname(__file__),"projects"),exist_ok=True )
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.json")
 DEFAULT_SETTINGS = {
     "screen_width": 1920,
-    "screen_height": 1080,
-    "fullscreen": True,
-    "fps": 60
+    "screen_height": 1080
 }
 
 try:
@@ -31,7 +29,7 @@ GUI.screen_height = screen_height = settings["screen_height"]
 GUI.box_dim = int(GUI.screen_width * 0.1),int(GUI.screen_height * 0.1)
 pygame.key.set_repeat(100, 100)  # 500ms delay before repeating, 50ms interval between repeats
 
-def save(width,height,fullscreen):
+def save(width,height):
     if width is None:
         pass#no changes made
     elif isinstance(width,int) == False:
@@ -54,8 +52,7 @@ def save(width,height,fullscreen):
     with open(SETTINGS_FILE, "w") as f:
         json.dump({
             "screen_width": settings["screen_width"],
-            "screen_height": settings["screen_height"],
-            "fps": settings["fps"]
+            "screen_height": settings["screen_height"]
         }, f, indent=4)
 
 #check if file structure is correct 
