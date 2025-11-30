@@ -1,24 +1,29 @@
 import pygame
-from start import settings,save
+from start import settings,screen,screen_width,screen_height
+from render import grid_size
 
 #the purpose of this file is to simplyfy UI design.
 
-screen = None
 mouse_pos = ()
-screen_width = 0#must be set during runtime
-screen_height = 0#must be set during runtime
 min_width = 10
 y_padding = 10
-display =  None#must be set during runtime
+screen_width_20th = screen_width//20
+screen_height_20th = screen_height//20
 mpos = None 
-font_type = 'Arial'
-font_size = screen_height* 0.05
-font = pygame.font.SysFont(font_type, font_type)
+font_type = "Arial"
+font_size = screen_height//20
+font = pygame.font.SysFont(font_type, font_size)
 message_queue = []
-
-def render_text(surface,text,x,y):
-    if isinstance(text,str) == True:
-        surface.blit(font.render(f"{text}",True,(0,0,0)),(x,y))
+white = (255,255,255)
+black = (0,0,0)
+plat = (200,225,255)
+grey = (200,200,200)
+#project_list
+border = 5
+font_size_project_list = screen_height//50
+font_project_list = pygame.font.SysFont(font_type, font_size_project_list)
+project_list_dim = [screen_width * 0.5+border,font_size_project_list + screen_height_20th,screen_width * 0.5 - screen_height_20th, font_size_project_list*2 + screen_height_20th]#index 1 and 3 are calc during runtime. index 0 and 1 are positions and index 3 and 4 are distance
+del_x_pos = screen_width-screen_width_20th-font_size_project_list*2
 
 def message(text,duration):#duration is in seconds
     message_queue.append((text,duration*settings["fps"]))
@@ -35,8 +40,8 @@ class text_box:#used in main menu
             raise TypeError("text must be a string")
         if not isinstance(typeable, bool):
             raise TypeError("typeable must be a bool")
-        elif typeable == None or typeable == False: self.__typeable == False
-        else: self.__typeable == True
+        elif typeable == None or typeable == False: self.__typeable = False
+        else: self.__typeable = True
 
         self.__x = x
         self.__y = y
@@ -48,26 +53,25 @@ class text_box:#used in main menu
             self.__typeable = typeable
             self.__selected = False#marks when the user can type
             self.__input = ''
-        elif code:#becomes static
+        else:#becomes static
             if not isinstance(code, str):
                 raise TypeError("code must be a string")
             self.__code_click = code
-            text_surface = self.__text.render(self.__text, True, (0, 0, 0))
-            text_width, text_height = text_surface.size()
+            text_surface = font.render(self.__text, True, (0, 0, 0))
+            text_width, text_height = text_surface.get_size()
 
             # Calculate box dimensions
             self.__width = text_width + 2 * min_width  # Total width: text width + left and right padding
             self.__height = text_height + 2 * y_padding # Keep height as before, or adjust to text_height + padding
-            self.__static_surface_selected = pygame.Surface()
+            self.__static_surface_hover = pygame.Surface((self.__width,self.__height))
             #when mouse is hovering over text box
-            pygame.draw.rect(self.__static_surface_selected,(255,255,255),(0,0,self.__width, self.__height))
-            pygame.draw.rect(self.__static_surface_selected,(255,255,255),(0,0,self.__width, self.__height),5)
-            self.__static_surface_selected.blit(text_surface,(min_width,y_padding))
+            self.__static_surface_hover.fill(white)
+            pygame.draw.rect(self.__static_surface_hover,plat,(0,0,self.__width, self.__height),border)
+            self.__static_surface_hover.blit(text_surface,(min_width,y_padding))
             #when mouse is not hovering over text box
-            self.__static_surface = pygame.Surface()
-            pygame.draw.rect(self.__static_surface, (200,200,200), (0,0, self.__width, self.__height))
+            self.__static_surface = pygame.Surface((self.__width,self.__height))
+            self.__static_surface_hover.fill(grey)
             self.__static_surface.blit(text_surface,(min_width,y_padding))
-        else:raise Warning("text box was neither defined for static or typeable")
     
     def hover(self):# Check if mouse is over the text box
         if mpos is not None:
@@ -84,26 +88,36 @@ class text_box:#used in main menu
             
             if len(self.__input) > 0:
                 text_surface = font.render(self.__input, True, (0, 0, 0))
-                text_width, text_height = text_surface.size()
+                text_width, text_height = text_surface.get_size()
 
                 # Calculate box dimensions
                 self.__width = text_width + 2 * min_width  # Total width: text width + left and right padding
                 self.__height = text_height  # Keep height as before, or adjust to text_height + padding
-                display.blit(text_surface,(self.__x+min_width, self.__y))
+                self.hover()
+                if self.__hover:
+                    pygame.draw.rect(screen, white, (self.__x, self.__y, self.__width, self.__height))
+                    pygame.draw.rect(screen, plat, (self.__x, self.__y, self.__width, self.__height), border)
+                else: pygame.draw.rect(screen, grey, (self.__x, self.__y, self.__width, self.__height))
+                
+                screen.blit(text_surface,(self.__x+min_width, self.__y))
             else:
                 text_surface = font.render(self.__text, True, (0, 0, 0))
-                text_width, text_height = text_surface.size()
+                text_width, text_height = text_surface.get_size()
 
                 # Calculate box dimensions
                 self.__width = text_width + 2 * min_width  # Total width: text width + left and right padding
                 self.__height = text_height  # Keep height as before, or adjust to text_height + padding
-            if self.__hover:
-                pygame.draw.rect(display, (255,255,255), (self.__x, self.__y, self.__width, self.__height))
-                pygame.draw.rect(display, (255,215,0), (self.__x, self.__y, self.__width, self.__height), 5)
-            else: pygame.draw.rect(display, (200,200,200), (self.__x, self.__y, self.__width, self.__height))
+                self.hover()
+                if self.__hover:
+                    pygame.draw.rect(screen, white, (self.__x, self.__y, self.__width, self.__height))
+                    pygame.draw.rect(screen, plat, (self.__x, self.__y, self.__width, self.__height), border)
+                else: pygame.draw.rect(screen, grey, (self.__x, self.__y, self.__width, self.__height))
+
+                screen.blit(text_surface,(self.__x+min_width, self.__y))
         else:
-            if self.__hover: display.blit(self.__static_surface_selected, (self.__x + min_width, self.__y + y_padding))
-            else: display.blit(self.__static_surface, (self.__x + min_width, self.__y + y_padding))
+            self.hover()
+            if self.__hover: screen.blit(self.__static_surface_hover, (self.__x , self.__y ))
+            else: screen.blit(self.__static_surface, (self.__x , self.__y ))
 
     def click(self):
         if self.__typeable == False:
@@ -111,7 +125,9 @@ class text_box:#used in main menu
         else:
             if self.__hover:
                 self.__selected = True
-            else:self.__selected = False
+            else:
+                self.__selected = False
+                self.__input = ''
 
     def move(self,dx,dy):
         self.__x += dx
@@ -128,7 +144,7 @@ class text_box:#used in main menu
         self.__static_surface_selected = pygame.Surface()
         #when mouse is hovering over text box
         pygame.draw.rect(self.__static_surface_selected,(255,255,255),(0,0,self.__width, self.__height))
-        pygame.draw.rect(self.__static_surface_selected,(255,255,255),(0,0,self.__width, self.__height),5)
+        pygame.draw.rect(self.__static_surface_selected,(255,255,255),(0,0,self.__width, self.__height),border)
         self.__static_surface_selected.blit(text_surface,(min_width,y_padding))
         #when mouse is not hovering over text box
         self.__static_surface = pygame.Surface()
@@ -136,20 +152,29 @@ class text_box:#used in main menu
         self.__static_surface.blit(text_surface,(min_width,y_padding))
 
     def input_add(self,user_input):
-        if self.__typeable == True and self.__selected == True:
-            self.__input.append(str(user_input))
-        else:raise Warning("called input_add() for non typeable text box")
+        if self.__typeable == True:
+            if self.__selected == True:
+                self.__input += user_input
+        else:raise Warning(f"called input_add() for non typeable text box: {self.__text}")
 
     def input_remove(self):
-        if self.__typeable == True and self.__selected == True:
-            self.__input[:-1]# Remove last character
+        if self.__typeable == True:
+            if len(self.__input) > 0:
+                self.__input[:-1]# Remove last character
         else:raise Warning("called input_remove() for non typeable text box")
 
     def input_get(self):
         return self.__input
+    
+    def selected_get(self):
+        return self.__selected
+    
+    def input_get(self):
+        return self.__input
 
-    def submit(self):
+    def input_reset(self):
         if self.__typeable:
+
             self.__input = ''#reset input
         else:raise Warning("cannot submit non typeable text box")
 
@@ -157,18 +182,19 @@ class option_menu:
     def __init__(self):
         self.__num_options = 0
         self.__option = []#format: title,function
-        self.__surface = pygame.Surface(screen_width*0.1,1).fill((255,255,255))
+        self.__surface = pygame.Surface((screen_width_20th,1)).fill((255,255,255))
 
     def option_add(self,title,function):
         if not isinstance(title, str) and not isinstance(function, str): return print('can not add option: option title or function not string type')
         self.__num_options += 1
-        self.__option.append(title,function)
-        self.__surface = pygame.Surface(screen_width*0.1,self.__num_options * font_size).fill((255,255,255))
+        self.__option.append((title,function))
+        self.__surface = pygame.Surface((screen_width_20th,self.__num_options * font_size))
+        self.__surface.fill((255,255,255))
         for n in range(len(self.__option)):
-            render_text(self.__surface,self.__option[n][0],0,n*font_size)
+            self.__surface.blit(pygame.font.SysFont(font_type, font_size).render(f"{self.__option[n][0]}",True,(0,0,0)),(0,n*font_size))
 
     def render(self,x,y):
-        display.blit(self.__surface,(x,y))
+        screen.blit(self.__surface,(x,y))
 
     def option_execute(self,index):
         exec(self.__num_options[1][index])
@@ -183,7 +209,25 @@ interconnect_option_menu.option_add('Remove',"""
 db.interconnect_remove(x,y)
 """)
 
-tb1 = text_box(screen_width*0.01,screen_height*0.01,f"Width: {settings["screen_width"]}",True)
-tb2 = text_box(screen_width*0.01,screen_height*0.01 + font_size,f"height: {settings["screen_height"]}",True)
-tb3 = text_box(screen_width*0.01,screen_height*0.01 + (2*font_size),"New project name",True)
-tb4 = text_box(screen_width*0.01,screen_height*0.01 + (3*font_size),"Exit")
+tb1 = text_box(screen_width_20th,screen_height_20th,f"Width: {settings["screen_width"]}",'',True)
+tb2 = text_box(screen_width_20th,screen_height_20th + (font_size * 3//2),f"Height: {settings["screen_height"]}",'',True)
+tb3 = text_box(screen_width_20th,screen_height_20th + (2*(font_size * 3//2)),"New project name",'',True)
+tb4 = text_box(screen_width_20th,screen_height_20th + (3*(font_size * 3//2)),"Exit",'',False)
+
+AND_surface = pygame.Surface((grid_size,grid_size))
+AND_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("AND",True,(0,0,0)),(0,grid_size//4))
+OR_surface = pygame.Surface((grid_size,grid_size))
+OR_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("OR",True,(0,0,0)),(0,grid_size//4))
+NAND_surface = pygame.Surface((grid_size,grid_size))
+NAND_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("NAND",True,(0,0,0)),(0,grid_size//4))
+NOR_surface = pygame.Surface((grid_size,grid_size))
+NOR_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("NOR",True,(0,0,0)),(0,grid_size//4))
+XOR_surface = pygame.Surface((grid_size,grid_size))
+XOR_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("XOR",True,(0,0,0)),(0,grid_size//4))
+XNOR_surface = pygame.Surface((grid_size,grid_size))
+XNOR_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("XNOR",True,(0,0,0)),(0,grid_size//4))
+NOT_surface = pygame.Surface((grid_size,grid_size))
+NOT_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("NOT",True,(0,0,0)),(0,grid_size//4))
+interconnect_surface = pygame.Surface((grid_size,grid_size))
+pygame.draw.line(interconnect_surface,(0,0,0),(0,grid_size//2),(grid_size,grid_size//2))
+pygame.draw.line(interconnect_surface,(0,0,0),(grid_size//2,0),(grid_size//2,grid_size))

@@ -1,6 +1,4 @@
 {
     "screen_width": 2560,
-    "screen_height": 1440,
-    "fullscreen": true,
-    "fps": 60
+    "screen_height": 1440
 }

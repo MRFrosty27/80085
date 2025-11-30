@@ -1,4 +1,3 @@
-from GUI import text
 from start import screen,screen_width,screen_height,screen
 import pygame
 from db import object_load,object_search_connected
@@ -22,7 +21,7 @@ def draw_cell(x, y, gate_type, camera_pos):
         cell = pygame.Surface((grid_size,grid_size))
         cell.fill((255,255,255))
         font = pygame.font.SysFont('Arial', grid_size//2)
-        cell.blit((font.render(['AND','OR','NAND','NOR','XOR','XNOR','NOT'][gate_type], True, (0,0,0))),(grid_size//4,grid_size//4))
+        cell.blit((font.render(('AND','OR','NAND','NOR','XOR','XNOR','NOT')[gate_type], True, (0,0,0))),(grid_size//4,grid_size//4))
         screen.blit(cell,(world_x, world_y))
         screen.blit(cell, (world_x, world_y))
 
@@ -173,13 +172,18 @@ class interconnect_y_cloumn:
         elif index == 3:
             return self.__slot3
     
-def render(dx,dy):
+def render(new_x, new_y):
+    global camera_pos, min_x, max_x, min_y, max_y
     x_offset = camera_pos[0] % grid_size
     y_offset = camera_pos[1] % grid_size
     for x in range(-x_offset, screen_width + grid_size, grid_size):
         pygame.draw.line(screen, (255,255,255), (x, 0), (x, screen_height))
     for y in range(-y_offset, screen_height + grid_size, grid_size):
         pygame.draw.line(screen, (255,255,255), (0, y), (screen_width, y))
+
+    #here dx and dy represent the change is grid pos
+    dx = (new_x - camera_pos[0]) // grid_size
+    dy = (new_y - camera_pos[1]) // grid_size
 
     if dx > 0:#right
         for n in range(dx):
@@ -221,7 +225,7 @@ def render(dx,dy):
             for y in range(len(obj_cache[x])):
                 if obj_cache[x][y] == None:pass
                 else:
-                    draw_cell(min_x+x,min_y+y, obj_cache[x][y], screen, camera_pos, text)
+                    draw_cell(min_x+x,min_y+y, obj_cache[x][y], screen, camera_pos)
     
     for x in inteconnect_cache:
             x_index = 0
@@ -251,3 +255,5 @@ def render(dx,dy):
                     pygame.draw.line(screen,(255,255,255),from_point,to_point)
                 y_index += 1
             x_index += 1
+
+            camera_pos = [new_x,new_y]

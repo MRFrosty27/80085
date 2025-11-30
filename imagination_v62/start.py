@@ -1,7 +1,9 @@
-import os, json,GUI,pygame
+import os, json,pygame
+from db import create_table_of_database_names
 
 #create folder where database files are stored 
-os.makedirs(os.path.join(os.path.dirname(__file__),"projects"),exist_ok=True ) 
+os.makedirs(os.path.join(os.path.dirname(__file__),"projects"),exist_ok=True )
+create_table_of_database_names()
 
 # Load settings from JSON (cross-platform)
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.json")
@@ -20,14 +22,13 @@ except FileNotFoundError:
 
 # Set up display
 pygame.init()
-GUI.display = screen = pygame.display.set_mode((settings["screen_width"], settings["screen_height"]))
+screen = pygame.display.set_mode((settings["screen_width"], settings["screen_height"]))
 clock = pygame.time.Clock()
 
 # Initialize game state
-GUI.screen_width = screen_width = settings["screen_width"]
-GUI.screen_height = screen_height = settings["screen_height"]
-GUI.box_dim = int(GUI.screen_width * 0.1),int(GUI.screen_height * 0.1)
-pygame.key.set_repeat(100, 100)  # 500ms delay before repeating, 50ms interval between repeats
+screen_width = settings["screen_width"]
+screen_height = settings["screen_height"]
+pygame.key.set_repeat(100, 100)  # 100ms delay before repeating, 100ms interval between repeats
 
 def save(width,height):
     if width is None:
@@ -35,17 +36,17 @@ def save(width,height):
     elif isinstance(width,int) == False:
         raise TypeError("width is not int type")
     else:
-        GUI.screen_width = screen_width = settings["screen_width"] = width
+        screen_width = settings["screen_width"] = width
     
     if height is None:
         pass#no changes made
     elif isinstance(height,int) == False:
         raise TypeError("height is not int type")
     else:
-        GUI.screen_height = screen_height = settings["screen_height"] = height
+        screen_height = settings["screen_height"] = height
 
     try:
-        GUI.display = screen = pygame.display.set_mode((settings["screen_width"], settings["screen_height"]))
+        screen = pygame.display.set_mode((settings["screen_width"], settings["screen_height"]))
     except:
         pass
     # Save settings
@@ -54,5 +55,3 @@ def save(width,height):
             "screen_width": settings["screen_width"],
             "screen_height": settings["screen_height"]
         }, f, indent=4)
-
-#check if file structure is correct 
