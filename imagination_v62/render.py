@@ -1,9 +1,10 @@
 from start import screen,screen_width,screen_height,screen
-import pygame
+import pygame,array
 from db import object_load,object_search_connected
 #gate number- and:0 , or:1, nand:2, nor:3, xor:4, xnor:5, not:6
 #Pygame coordinate note: +x = right, +y = down
 
+process_pool = None#defined in main.py
 obj_cache = []
 inteconnect_cache = []
 camera_pos = [0, 0]
@@ -45,14 +46,18 @@ def slot_coord(x,y,slot_code):#only used in calc the path of an interconnect
 
 class obj_y_cloumn:
     def __init__(self):
-        self.__array = []
+        self.__array = array.array('q',[])#signed long long
     
     def __len__(self):
         return len(self.__array)
     
-    def render(self,x,min_y,max_y):
-        for y in range(min_y,max_y):
-            self.__array.append(object_load(x,y))
+    def render(self, x):
+        # Use starmap to maintain order
+        global process_pool
+        if process_pool is None:
+            raise RuntimeError("multiprocessing Pool not initialized! Create it in main.py under if __name__ == '__main__':")
+        results = process_pool.starmap(object_load, [(x, y) for y in range(min_y, max_y)])
+        self.__array.extend(results)
     
     def render_up(self,x,y):
         if isinstance(x,int) == True and isinstance(y,int) == True:
@@ -72,6 +77,9 @@ class obj_y_cloumn:
     def __iter__(self):
         return self.__array
     
+    def __len__(self):
+        return len(self.__array)
+    
 class interconnect_y_cloumn:
     def __init__(self):#format outx,outy,outslot
         self.__slot0 = []
@@ -80,9 +88,13 @@ class interconnect_y_cloumn:
         self.__slot3 = []
     
     def __len__(self):
-        return len(self.__array)
+        return array.array('H',[len(self.__slot0),len(self.__slot1),len(self.__slot2),len(self.__slot3)])
     
-    def load_row(self,inslot,outx,outy,outslot):#slot: 0-top left, 1-top right, 2-bottom left, 3-bottom right
+    def __append__(self,inslot,outx,outy,outslot):#slot: 0-top left, 1-top right, 2-bottom left, 3-bottom right
+        if isinstance(inslot,int) == False: raise Warning('inslot is not int type')
+        elif isinstance(outx,int) == False: raise Warning('outx is not int type')
+        elif isinstance(outy,int) == False: raise Warning('outy is not int type')
+        elif isinstance(outslot,int) == False: raise Warning('outslot is not int type')
         if inslot == 0:
             self.__slot0.append(outx,outy,outslot)
             self.__slot1.append(None)
@@ -104,12 +116,20 @@ class interconnect_y_cloumn:
             self.__slot1.append(None)
             self.__slot2.append(None)
     
-    def load_col(self,x,min_y,max_y):
-        for y in range(min_y,max_y):
-            if object_search_connected(x,y) is not None:
+    def load_cell(self,x,y):
+        if object_search_connected(x,y) is not None:
                 inx,iny,outx,outy,inslot,outslot = object_search_connected(x,y)
-                self.load_row(inslot,outx,outy,outslot)
-                
+                self.__append__(inslot,outx,outy,outslot)
+
+    def remove_cell(self,x,y):
+        pass
+
+    def load_col(self,x):
+        # Use starmap to maintain order
+        global process_pool
+        if process_pool is None:
+            raise RuntimeError("multiprocessing Pool not initialized! Create it in main.py under if __name__ == '__main__':")
+        process_pool.starmap(self.load_cell, [(x, y) for y in range(min_y, max_y)])
     
     def render_up(self,x,y):
         if isinstance(x,int) == True and isinstance(y,int) == True:
@@ -172,7 +192,9 @@ class interconnect_y_cloumn:
         elif index == 3:
             return self.__slot3
     
-def render(new_x, new_y):
+    def __len__(self):
+        return len(self.__slot0),len(self.__slot1),len(self.__slot2),len(self.__slot3)
+def render():
     global camera_pos, min_x, max_x, min_y, max_y
     x_offset = camera_pos[0] % grid_size
     y_offset = camera_pos[1] % grid_size
@@ -181,22 +203,27 @@ def render(new_x, new_y):
     for y in range(-y_offset, screen_height + grid_size, grid_size):
         pygame.draw.line(screen, (255,255,255), (0, y), (screen_width, y))
 
-    #here dx and dy represent the change is grid pos
-    dx = (new_x - camera_pos[0]) // grid_size
-    dy = (new_y - camera_pos[1]) // grid_size
+    #dx and dy represent the change is grid pos
+    dx = camera_pos[0] // grid_size - min_x
+    dy = camera_pos[1] // grid_size - min_y
+
+    min_x = camera_pos[0] // grid_size
+    max_x = (camera_pos[0] + screen_width) // grid_size
+    min_y = camera_pos[1] // grid_size
+    max_y = (camera_pos[1] + screen_height) // grid_size 
 
     if dx > 0:#right
         for n in range(dx):
             obj_cache.pop(0)
             inteconnect_cache.pop(0)
-            obj = obj_y_cloumn()
-            obj.render(max_x+n)
-            obj_cache.append(obj)
-            interconnect = interconnect_y_cloumn()
-            interconnect.render(max_x+n)
-            inteconnect_cache.append(interconnect)
+            obj_col = obj_y_cloumn()
+            obj_col.render(max_x+n)
+            obj_cache.append(obj_col)
+            interconnect_col = interconnect_y_cloumn()
+            interconnect_col.load_col(max_x+n)
+            inteconnect_cache.append(interconnect_col)
 
-    else:
+    elif dx < 0:
         dx *= -1#change to positive value
         for n in range(dx):
             obj_cache.pop(-1)
@@ -205,7 +232,7 @@ def render(new_x, new_y):
             obj.render(min_x-n)
             obj_cache.insert(0,obj)
             interconnect = interconnect_y_cloumn()
-            interconnect.render(min_x-n)
+            interconnect.load_col(min_x-n)
             inteconnect_cache.insert(0,interconnect)
     if dy > 0:#down
         for n in range(dy):
@@ -213,10 +240,10 @@ def render(new_x, new_y):
             for col in obj_cache:
                 col.render_down(x,max_y+n)
                 x += 1
-    else:
+    elif dy < 0:
         dy *= -1#change to positive value
+        x = min_x
         for n in range(dy):
-            x = min_x
             for col in obj_cache:
                 col.render_up(x,min_y-n)
                 x += 1
@@ -256,4 +283,3 @@ def render(new_x, new_y):
                 y_index += 1
             x_index += 1
 
-            camera_pos = [new_x,new_y]

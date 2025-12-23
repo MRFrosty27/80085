@@ -6,7 +6,7 @@ db_name = None
 
 """
 
-def access_database(DB_name):#warning: when this func is executed from this file it will return an error as the path will be .../databases/projects rather than .../projects
+def access_database(DB_name):
     path = os.path.join(os.path.dirname(__file__),"projects")
     if os.path.exists(path):
         try:
@@ -20,15 +20,12 @@ def access_database(DB_name):#warning: when this func is executed from this file
 
 #table creation
 def table_get_all():
-    #print("Start: get all table names")#use fore debug
     db_name[1].execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables = db_name[1].fetchall()
     table_names = [t[0] for t in tables]
     #remove first 2 tables that are for the SQL config
     table_names.pop(0)
     table_names.pop(0)
-    #print(table_names)
-    #print("End: get all table names")#use for debug
     return table_names
 
 def create_table_of_database_names():#only needes to be performed once when user installs software
@@ -70,7 +67,7 @@ def table_interconnect_create():#creates a mandatory table that defines how bits
         outslot INTEGER
     )
     """#slot: 0-top left, 1-top right, 2-bottom left, 3-bottom right
-    create_index = "CREATE INDEX index_cord ON interconnect (inx,iny, outx, outy)"
+    create_index = "CREATE INDEX index_path ON interconnect (inx,iny, outx, outy)"
     db_name[1].execute(query)
     db_name[1].execute(create_index)
     db_name[0].commit()
@@ -139,7 +136,9 @@ def object_add(X_cord,Y_cord,operation):#get called when a user adds a new gate
 def object_load(X_cord,Y_cord):#gets called when GUI needs to know which gate to display
     db_name[1].execute(f"SELECT * FROM main WHERE X_cord = ? AND Y_cord = ?;", (X_cord, Y_cord))
     result = db_name[1].fetchone()
-    return result[2]#output operation
+    if result != None:
+        return result[2]#output operation
+    else:return None
 
 def object_update_cord(table,X_cord,Y_cord):#if the user moves gate to a diff pos
     update_X = f"""

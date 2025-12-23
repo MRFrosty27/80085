@@ -1,5 +1,5 @@
 import pygame
-from start import settings,screen,screen_width,screen_height
+from start import screen,screen_width,screen_height
 from render import grid_size
 
 #the purpose of this file is to simplyfy UI design.
@@ -26,7 +26,7 @@ project_list_dim = [screen_width * 0.5+border,font_size_project_list + screen_he
 del_x_pos = screen_width-screen_width_20th-font_size_project_list*2
 
 def message(text,duration):#duration is in seconds
-    message_queue.append((text,duration*settings["fps"]))
+    message_queue.append((text,duration*60))
 
 class text_box:#used in main menu
 
@@ -70,7 +70,7 @@ class text_box:#used in main menu
             self.__static_surface_hover.blit(text_surface,(min_width,y_padding))
             #when mouse is not hovering over text box
             self.__static_surface = pygame.Surface((self.__width,self.__height))
-            self.__static_surface_hover.fill(grey)
+            self.__static_surface.fill(grey)
             self.__static_surface.blit(text_surface,(min_width,y_padding))
     
     def hover(self):# Check if mouse is over the text box
@@ -180,15 +180,17 @@ class text_box:#used in main menu
 
 class option_menu:
     def __init__(self):
-        self.__num_options = 0
         self.__option = []#format: title,function
-        self.__surface = pygame.Surface((screen_width_20th,1)).fill((255,255,255))
+        surface = pygame.Surface((screen_width_20th,1))
+        surface.fill((255,255,255))
+        self.__surface = surface
+        self.__open = False
+        self.__pos = None,None#defines where it renders
 
     def option_add(self,title,function):
         if not isinstance(title, str) and not isinstance(function, str): return print('can not add option: option title or function not string type')
-        self.__num_options += 1
         self.__option.append((title,function))
-        self.__surface = pygame.Surface((screen_width_20th,self.__num_options * font_size))
+        self.__surface = pygame.Surface((screen_width_20th,len(self.__option) * font_size))
         self.__surface.fill((255,255,255))
         for n in range(len(self.__option)):
             self.__surface.blit(pygame.font.SysFont(font_type, font_size).render(f"{self.__option[n][0]}",True,(0,0,0)),(0,n*font_size))
@@ -198,6 +200,25 @@ class option_menu:
 
     def option_execute(self,index):
         exec(self.__num_options[1][index])
+
+    def open_get(self):
+        return self.__open
+    
+    def click(self):
+        if self.__open == False:
+            self.__open = True
+        elif self.__pos[0] != None or self.__pos[1] != None:
+            if self.__pos[0] <= mouse_pos[0] <= self.__pos[0] + self.__surface.get_size()[0] and self.__pos[1] <= mouse_pos[1] <= self.__pos[1] + self.__surface.get_size()[1]:
+                top,bottom = self.__pos,self.__pos + font_size
+                for _ in range(len(self.__option)):
+                    if top <= mouse_pos[1] <= bottom:
+                        exec(self.__option[1])
+                        break
+                    else: 
+                        top += font_size
+                        bottom += font_size
+            else:
+                self.__open = False
 
 #create option menus
 obj_option_menu = option_menu()
@@ -209,25 +230,31 @@ interconnect_option_menu.option_add('Remove',"""
 db.interconnect_remove(x,y)
 """)
 
-tb1 = text_box(screen_width_20th,screen_height_20th,f"Width: {settings["screen_width"]}",'',True)
-tb2 = text_box(screen_width_20th,screen_height_20th + (font_size * 3//2),f"Height: {settings["screen_height"]}",'',True)
-tb3 = text_box(screen_width_20th,screen_height_20th + (2*(font_size * 3//2)),"New project name",'',True)
-tb4 = text_box(screen_width_20th,screen_height_20th + (3*(font_size * 3//2)),"Exit",'',False)
+tb3 = text_box(screen_width_20th,screen_height_20th,"New project name",'',True)
+tb4 = text_box(screen_width_20th,screen_height_20th + (font_size * 3//2),"Exit",'',False)
 
 AND_surface = pygame.Surface((grid_size,grid_size))
+AND_surface.fill(white)
 AND_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("AND",True,(0,0,0)),(0,grid_size//4))
 OR_surface = pygame.Surface((grid_size,grid_size))
+OR_surface.fill(white)
 OR_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("OR",True,(0,0,0)),(0,grid_size//4))
 NAND_surface = pygame.Surface((grid_size,grid_size))
+NAND_surface.fill(white)
 NAND_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("NAND",True,(0,0,0)),(0,grid_size//4))
 NOR_surface = pygame.Surface((grid_size,grid_size))
+NOR_surface.fill(white)
 NOR_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("NOR",True,(0,0,0)),(0,grid_size//4))
 XOR_surface = pygame.Surface((grid_size,grid_size))
+XOR_surface.fill(white)
 XOR_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("XOR",True,(0,0,0)),(0,grid_size//4))
 XNOR_surface = pygame.Surface((grid_size,grid_size))
+XNOR_surface.fill(white)
 XNOR_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("XNOR",True,(0,0,0)),(0,grid_size//4))
 NOT_surface = pygame.Surface((grid_size,grid_size))
+NOT_surface.fill(white)
 NOT_surface.blit(pygame.font.SysFont(font_type, grid_size//2).render("NOT",True,(0,0,0)),(0,grid_size//4))
 interconnect_surface = pygame.Surface((grid_size,grid_size))
+interconnect_surface.fill(white)
 pygame.draw.line(interconnect_surface,(0,0,0),(0,grid_size//2),(grid_size,grid_size//2))
 pygame.draw.line(interconnect_surface,(0,0,0),(grid_size//2,0),(grid_size//2,grid_size))
