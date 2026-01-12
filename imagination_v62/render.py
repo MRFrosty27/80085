@@ -1,12 +1,13 @@
 from start import screen,screen_width,screen_height,screen
 import pygame,array
 from db import object_load,object_search_connected
-#gate number- and:0 , or:1, nand:2, nor:3, xor:4, xnor:5, not:6
+from collections import deque
+#gate number- none:0 and:1 , or:2, nand:3, nor:4, xor:5, xnor:6, not:7
 #Pygame coordinate note: +x = right, +y = down
 
 process_pool = None#defined in main.py
-obj_cache = []
-inteconnect_cache = []
+obj_cache = deque([])
+inteconnect_cache = deque([])
 camera_pos = [0, 0]
 cam_speed = 5
 grid_size=screen_height//20
@@ -22,7 +23,7 @@ def draw_cell(x, y, gate_type, camera_pos):
         cell = pygame.Surface((grid_size,grid_size))
         cell.fill((255,255,255))
         font = pygame.font.SysFont('Arial', grid_size//2)
-        cell.blit((font.render(('AND','OR','NAND','NOR','XOR','XNOR','NOT')[gate_type], True, (0,0,0))),(grid_size//4,grid_size//4))
+        cell.blit((font.render(('AND','OR','NAND','NOR','XOR','XNOR','NOT')[gate_type+1], True, (0,0,0))),(grid_size//4,grid_size//4))
         screen.blit(cell,(world_x, world_y))
         screen.blit(cell, (world_x, world_y))
 
@@ -46,18 +47,22 @@ def slot_coord(x,y,slot_code):#only used in calc the path of an interconnect
 
 class obj_y_cloumn:
     def __init__(self):
-        self.__array = array.array('q',[])#signed long long
+        self.__array = array.array('L',[])#signed long long
     
     def __len__(self):
         return len(self.__array)
     
-    def render(self, x):
+    def render_column(self, x):
+        """
         # Use starmap to maintain order
         global process_pool
         if process_pool is None:
             raise RuntimeError("multiprocessing Pool not initialized! Create it in main.py under if __name__ == '__main__':")
-        results = process_pool.starmap(object_load, [(x, y) for y in range(min_y, max_y)])
-        self.__array.extend(results)
+        results = process_pool.starmap(object_load, [(x, y,True) for y in range(min_y, max_y)])
+        self.__array.extend(results)"""
+        for y in range(min_y, max_y):
+            self.__array.append(object_load(x,y))
+
     
     def render_up(self,x,y):
         if isinstance(x,int) == True and isinstance(y,int) == True:
@@ -82,10 +87,10 @@ class obj_y_cloumn:
     
 class interconnect_y_cloumn:
     def __init__(self):#format outx,outy,outslot
-        self.__slot0 = []
-        self.__slot1 = []
-        self.__slot2 = []
-        self.__slot3 = []
+        self.__slot0 = array.array('L',[])
+        self.__slot1 = array.array('L',[])
+        self.__slot2 = array.array('L',[])
+        self.__slot3 = array.array('L',[])
     
     def __len__(self):
         return array.array('H',[len(self.__slot0),len(self.__slot1),len(self.__slot2),len(self.__slot3)])
@@ -116,20 +121,23 @@ class interconnect_y_cloumn:
             self.__slot1.append(None)
             self.__slot2.append(None)
     
-    def load_cell(self,x,y):
+    def load_path(self,x,y):
         if object_search_connected(x,y) is not None:
                 inx,iny,outx,outy,inslot,outslot = object_search_connected(x,y)
                 self.__append__(inslot,outx,outy,outslot)
 
-    def remove_cell(self,x,y):
+    def remove_path(self,x,y):
         pass
 
-    def load_col(self,x):
+    def load_paths_in_column(self,x):
+        """
         # Use starmap to maintain order
         global process_pool
         if process_pool is None:
             raise RuntimeError("multiprocessing Pool not initialized! Create it in main.py under if __name__ == '__main__':")
-        process_pool.starmap(self.load_cell, [(x, y) for y in range(min_y, max_y)])
+        process_pool.starmap(self.load_path, [(x, y,True) for y in range(min_y, max_y)])"""
+        for y in range(min_y, max_y):
+            self.load_path(x,y)
     
     def render_up(self,x,y):
         if isinstance(x,int) == True and isinstance(y,int) == True:
@@ -194,6 +202,7 @@ class interconnect_y_cloumn:
     
     def __len__(self):
         return len(self.__slot0),len(self.__slot1),len(self.__slot2),len(self.__slot3)
+    
 def render():
     global camera_pos, min_x, max_x, min_y, max_y
     x_offset = camera_pos[0] % grid_size
@@ -214,26 +223,26 @@ def render():
 
     if dx > 0:#right
         for n in range(dx):
-            obj_cache.pop(0)
-            inteconnect_cache.pop(0)
+            obj_cache.pop()
+            inteconnect_cache.pop()
             obj_col = obj_y_cloumn()
-            obj_col.render(max_x+n)
+            obj_col.render_column(max_x+n)
             obj_cache.append(obj_col)
             interconnect_col = interconnect_y_cloumn()
-            interconnect_col.load_col(max_x+n)
+            interconnect_col.load_paths_in_column(max_x+n)
             inteconnect_cache.append(interconnect_col)
 
     elif dx < 0:
         dx *= -1#change to positive value
         for n in range(dx):
-            obj_cache.pop(-1)
-            inteconnect_cache.pop(-1)
+            obj_cache.popleft()
+            inteconnect_cache.popleft()
             obj = obj_y_cloumn()
-            obj.render(min_x-n)
-            obj_cache.insert(0,obj)
+            obj.render_column(min_x-n)
+            obj_cache.appendleft(obj)
             interconnect = interconnect_y_cloumn()
-            interconnect.load_col(min_x-n)
-            inteconnect_cache.insert(0,interconnect)
+            interconnect.load_paths_in_column(min_x-n)
+            inteconnect_cache.appendleft(interconnect)
     if dy > 0:#down
         for n in range(dy):
             x = min_x
@@ -250,7 +259,7 @@ def render():
     
     for x in range(len(obj_cache)):
             for y in range(len(obj_cache[x])):
-                if obj_cache[x][y] == None:pass
+                if obj_cache[x][y] == 0:pass
                 else:
                     draw_cell(min_x+x,min_y+y, obj_cache[x][y], screen, camera_pos)
     
@@ -283,3 +292,11 @@ def render():
                 y_index += 1
             x_index += 1
 
+def setup_render():
+    for column_number in range(screen_width//grid_size):
+        new_obj_column = obj_y_cloumn()
+        new_obj_column.render_column(min_x+column_number)
+        new_interconnect_column = interconnect_y_cloumn()
+        new_interconnect_column.load_paths_in_column(min_x+column_number)
+        obj_cache.append(new_obj_column)
+        inteconnect_cache.append(new_interconnect_column)

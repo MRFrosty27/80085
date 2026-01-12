@@ -79,7 +79,9 @@ class text_box:#used in main menu
             if (self.__x <= mouse_x <= self.__x + self.__width and 
                 self.__y <= mouse_y <= self.__y + self.__height):
                 self.__hover = True
-            else: self.__hover = False
+            else: 
+                self.__hover = False
+
 
     def render(self):
         # Draw the text box
@@ -185,7 +187,7 @@ class option_menu:
         surface.fill((255,255,255))
         self.__surface = surface
         self.__open = False
-        self.__pos = None,None#defines where it renders
+        self.__pos = None,None
 
     def option_add(self,title,function):
         if not isinstance(title, str) and not isinstance(function, str): return print('can not add option: option title or function not string type')
@@ -210,9 +212,9 @@ class option_menu:
         elif self.__pos[0] != None or self.__pos[1] != None:
             if self.__pos[0] <= mouse_pos[0] <= self.__pos[0] + self.__surface.get_size()[0] and self.__pos[1] <= mouse_pos[1] <= self.__pos[1] + self.__surface.get_size()[1]:
                 top,bottom = self.__pos,self.__pos + font_size
-                for _ in range(len(self.__option)):
+                for option_number in range(len(self.__option)):
                     if top <= mouse_pos[1] <= bottom:
-                        exec(self.__option[1])
+                        exec(self.__option[option_number][1])
                         break
                     else: 
                         top += font_size
@@ -222,7 +224,7 @@ class option_menu:
 
 #create option menus
 obj_option_menu = option_menu()
-obj_option_menu.option_add('Remove',"""
+obj_option_menu.option_add('Remove component',"""
 db.object_remove(x,y)
 """)
 interconnect_option_menu = option_menu()

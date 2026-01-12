@@ -8,7 +8,7 @@ if __name__ == '__main__':
     from sys import exit
     from datetime import datetime
     freeze_support()  # is safe for Windoes,MacOS and others
-    render.process_pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())#
+    
 
     #component menu
     component_menu_top = start.screen_height - (2*render.grid_size)#y cord for the top of the menu
@@ -39,9 +39,11 @@ if __name__ == '__main__':
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    render.process_pool.close()
-                    render.process_pool.join()
-                    exit()#clode program
+                    if render.process_pool is not None:
+                        render.process_pool.close()
+                        render.process_pool.join()
+                    pygame.quit()
+                    exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_BACKSPACE:
                         GUI.tb3.input_remove()
@@ -63,38 +65,40 @@ if __name__ == '__main__':
             pygame.draw.rect(start.screen,GUI.plat,(start.screen_width * 0.5, GUI.screen_height_20th, start.screen_width * 0.5 - GUI.screen_width_20th, start.screen_height - 2*GUI.screen_height_20th),GUI.border)
             start.screen.blit(GUI.font_project_list.render(f"{"Name|Speed(GHz)|Created|Last accessed|Last modified"}",True,(0,0,0)),(start.screen_width * 0.5, GUI.screen_height_20th))
             n=0
-            for project in db.database_get_all_project_names():
+            for project_data in db.database_get_all_project_names():
                 GUI.project_list_dim[1] = GUI.font_size_project_list*(n+1) + GUI.screen_height_20th
                 GUI.project_list_dim[3] = GUI.project_list_dim[1]+ GUI.font_size_project_list
-                start.screen.blit(GUI.font_project_list.render(f"{project[0]}|{project[1]}|{project[2]}|{project[3]}|{project[4]}",True,(0,0,0)),(GUI.project_list_dim[0],GUI.project_list_dim[1]))
+                start.screen.blit(GUI.font_project_list.render(f"{project_data[0]}|{project_data[1]}|{project_data[2]}|{project_data[3]}|{project_data[4]}",True,(0,0,0)),(GUI.project_list_dim[0],GUI.project_list_dim[1]))
                 if n == int((start.screen_height - GUI.screen_height_20th*2)/GUI.font_size_project_list):#stops projects names from being rendered off the list
                     break
                 if GUI.project_list_dim[1] <= mouse_pos[1]<= GUI.project_list_dim[3] and GUI.project_list_dim[0] <= mouse_pos[0]:
                     if mouse_buttons[0]:
                         if mouse_pos[0] < GUI.del_x_pos:
-                                db.db_name = db.access_database(project[0])
+                                db.db_connection,db.db_cursor = db.access_database(project_data[0])
+                                db.db_name = project_data[0]
+                                render.process_pool = multiprocessing.Pool(processes=multiprocessing.cpu_count(),initializer=db.init_process_connection(db.db_name))
+                                render.setup_render()
                                 project = True
                                 main_menu = False
                                 break
                         else:
-                            db.project_delete(project[0])
+                            db.project_delete(project_data[0])
                     start.screen.blit(GUI.font_project_list.render(f"{"DEL"}",True,GUI.plat),(GUI.del_x_pos,GUI.project_list_dim[1]))
                 n+=1 
 
             pygame.display.flip()
             start.clock.tick(60)
-        for n in range(start.screen_width // render.grid_size):
-            render.obj_cache.append(render.obj_y_cloumn())
-            render.obj_cache[-1].render(render.min_x + n)
-            render.inteconnect_cache.append(render.interconnect_y_cloumn())
-            render.inteconnect_cache[-1].load_col(render.min_x + n)
 
         while project:
             start.screen.fill((0, 0, 0))
             mouse_pos = pygame.mouse.get_pos()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    exit()  # Or handle quit more gracefully if needed
+                    if render.process_pool is not None:
+                        render.process_pool.close()
+                        render.process_pool.join()
+                    pygame.quit()
+                    exit()
 
             keys = pygame.key.get_pressed()
             mouse_buttons = pygame.mouse.get_pressed(num_buttons=3)
@@ -118,22 +122,27 @@ if __name__ == '__main__':
                     component_selected_array[n]=True
 
             #gate option menu
-            mouse_cell_contains = db.object_load(render.camera_pos[0],render.camera_pos[1])
+            mouse_cell_contains = db.object_load(mouse_pos[0],mouse_pos[1])
             if mouse_cell_contains != None and mouse_buttons[3]:
                 GUI.obj_option_menu.click()
             if GUI.obj_option_menu.open_get() == True:
-                GUI.obj_option_menu.render(render.camera_pos[0],render.camera_pos[1])
+                GUI.obj_option_menu.render(mouse_pos[0],mouse_pos[1])
 
             #interconnect option menu
+            #render.process_pool.map(db.object_search_connected,[() for ])
+            for x in range(render.min_x,render.max_x):
+                for y in range(render.min_y,render.max_y):
+                    db.object_search_connected(x,y)
+
+            #place selected component
             for n in range(len(component_selected_array)):
                 if component_selected_array[n] == True:
                     start.screen.blit(component_surfaces[n],(mouse_pos[0],mouse_pos[1]))
                     break
 
-            #place selected component
             if mouse_pos[1] < component_menu_top:
                 if mouse_buttons[0]:
-                    render.camera_pos[0] + mouse_pos[0]
+                    (render.camera_pos[0] + mouse_pos[0])//render.grid_size
 
             pygame.display.flip()
             start.clock.tick(60)
