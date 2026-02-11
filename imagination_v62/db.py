@@ -120,7 +120,7 @@ def database_get_all_project_names():
     db[1].execute(f"SELECT * FROM database_names")
     return db[1].fetchall()
 
-def interconnect_add(inx,iny,outx,outy):
+def interconnect_add(inx,iny,outx,outy,inslot,outslot):
     query = f"""
     INSERT INTO interconnect (
     inx ,
@@ -132,7 +132,7 @@ def interconnect_add(inx,iny,outx,outy):
     )
     VALUES (?,?,?,?)
     """
-    db_cursor.execute(query,(inx,iny,outx,outy))
+    db_cursor.execute(query,(inx,iny,outx,outy,inslot,outslot))
     db_connection.commit()
 
 def object_add(X_cord,Y_cord,operation):#get called when a user adds a new gate 

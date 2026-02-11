@@ -187,7 +187,7 @@ class option_menu:
         surface.fill((255,255,255))
         self.__surface = surface
         self.__open = False
-        self.__pos = None,None
+        self.__pos = [None,None]
 
     def option_add(self,title,function):
         if not isinstance(title, str) and not isinstance(function, str): return print('can not add option: option title or function not string type')
@@ -197,8 +197,9 @@ class option_menu:
         for n in range(len(self.__option)):
             self.__surface.blit(pygame.font.SysFont(font_type, font_size).render(f"{self.__option[n][0]}",True,(0,0,0)),(0,n*font_size))
 
-    def render(self,x,y):
-        screen.blit(self.__surface,(x,y))
+    def render(self):
+        print(self.__pos)
+        screen.blit(self.__surface,(self.__pos[0],self.__pos[1]))
 
     def option_execute(self,index):
         exec(self.__num_options[1][index])
@@ -209,6 +210,7 @@ class option_menu:
     def click(self):
         if self.__open == False:
             self.__open = True
+            self.__pos = mouse_pos
         elif self.__pos[0] != None or self.__pos[1] != None:
             if self.__pos[0] <= mouse_pos[0] <= self.__pos[0] + self.__surface.get_size()[0] and self.__pos[1] <= mouse_pos[1] <= self.__pos[1] + self.__surface.get_size()[1]:
                 top,bottom = self.__pos,self.__pos + font_size
@@ -221,6 +223,7 @@ class option_menu:
                         bottom += font_size
             else:
                 self.__open = False
+        else: raise ValueError('option menu does not have position')
 
 #create option menus
 obj_option_menu = option_menu()

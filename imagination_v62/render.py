@@ -1,6 +1,6 @@
 from start import screen,screen_width,screen_height,screen
 import pygame,array
-from db import object_load,object_search_connected
+from db import object_load,object_search_connected, object_add
 from collections import deque
 #gate number- none:0 and:1 , or:2, nand:3, nor:4, xor:5, xnor:6, not:7
 #Pygame coordinate note: +x = right, +y = down
@@ -23,7 +23,7 @@ def draw_cell(x, y, gate_type, camera_pos):
         cell = pygame.Surface((grid_size,grid_size))
         cell.fill((255,255,255))
         font = pygame.font.SysFont('Arial', grid_size//2)
-        cell.blit((font.render(('AND','OR','NAND','NOR','XOR','XNOR','NOT')[gate_type+1], True, (0,0,0))),(grid_size//4,grid_size//4))
+        cell.blit((font.render(('None','AND','OR','NAND','NOR','XOR','XNOR','NOT')[gate_type], True, (0,0,0))),(grid_size//4,grid_size//4))
         screen.blit(cell,(world_x, world_y))
         screen.blit(cell, (world_x, world_y))
 
@@ -49,9 +49,6 @@ class obj_y_cloumn:
     def __init__(self):
         self.__array = array.array('L',[])#signed long long
     
-    def __len__(self):
-        return len(self.__array)
-    
     def render_column(self, x):
         """
         # Use starmap to maintain order
@@ -63,7 +60,9 @@ class obj_y_cloumn:
         for y in range(min_y, max_y):
             self.__array.append(object_load(x,y))
 
-    
+    def change_cell(self,y,gate_type):
+        self.__array[y] = gate_type
+
     def render_up(self,x,y):
         if isinstance(x,int) == True and isinstance(y,int) == True:
             self.__array.pop(-1)
@@ -223,8 +222,8 @@ def render():
 
     if dx > 0:#right
         for n in range(dx):
-            obj_cache.pop()
-            inteconnect_cache.pop()
+            obj_cache.popleft()
+            inteconnect_cache.popleft()
             obj_col = obj_y_cloumn()
             obj_col.render_column(max_x+n)
             obj_cache.append(obj_col)
@@ -235,11 +234,11 @@ def render():
     elif dx < 0:
         dx *= -1#change to positive value
         for n in range(dx):
-            obj_cache.popleft()
-            inteconnect_cache.popleft()
-            obj = obj_y_cloumn()
-            obj.render_column(min_x-n)
-            obj_cache.appendleft(obj)
+            obj_cache.pop()
+            inteconnect_cache.pop()
+            obj_col = obj_y_cloumn()
+            obj_col.render_column(min_x-n)
+            obj_cache.appendleft(obj_col)
             interconnect = interconnect_y_cloumn()
             interconnect.load_paths_in_column(min_x-n)
             inteconnect_cache.appendleft(interconnect)
@@ -261,7 +260,7 @@ def render():
             for y in range(len(obj_cache[x])):
                 if obj_cache[x][y] == 0:pass
                 else:
-                    draw_cell(min_x+x,min_y+y, obj_cache[x][y], screen, camera_pos)
+                    draw_cell(min_x+x,min_y+y, obj_cache[x][y], camera_pos)
     
     for x in inteconnect_cache:
             x_index = 0
