@@ -198,11 +198,11 @@ class option_menu:
             self.__surface.blit(pygame.font.SysFont(font_type, font_size).render(f"{self.__option[n][0]}",True,(0,0,0)),(0,n*font_size))
 
     def render(self):
-        print(self.__pos)
-        screen.blit(self.__surface,(self.__pos[0],self.__pos[1]))
+        if self.__pos[0] == None or self.__pos[1] == None: raise TypeError(f'cannot render when self.__pos is nontype\nself__open: {self.open_get}')
+        else: screen.blit(self.__surface,(self.__pos[0],self.__pos[1]))
 
     def option_execute(self,index):
-        exec(self.__num_options[1][index])
+        exec(self.__option[index][1])
 
     def open_get(self):
         return self.__open
@@ -211,7 +211,7 @@ class option_menu:
         if self.__open == False:
             self.__open = True
             self.__pos = mouse_pos
-        elif self.__pos[0] != None or self.__pos[1] != None:
+        else:
             if self.__pos[0] <= mouse_pos[0] <= self.__pos[0] + self.__surface.get_size()[0] and self.__pos[1] <= mouse_pos[1] <= self.__pos[1] + self.__surface.get_size()[1]:
                 top,bottom = self.__pos,self.__pos + font_size
                 for option_number in range(len(self.__option)):
@@ -223,7 +223,7 @@ class option_menu:
                         bottom += font_size
             else:
                 self.__open = False
-        else: raise ValueError('option menu does not have position')
+                self.__pos = None
 
 #create option menus
 obj_option_menu = option_menu()

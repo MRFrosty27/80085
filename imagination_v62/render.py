@@ -9,6 +9,8 @@ process_pool = None#defined in main.py
 obj_cache = deque([])
 inteconnect_cache = deque([])
 camera_pos = [0, 0]
+x_offset = None
+y_offset = None
 cam_speed = 5
 grid_size=screen_height//20
 min_x = camera_pos[0] // grid_size
@@ -203,15 +205,14 @@ class interconnect_y_cloumn:
         return len(self.__slot0),len(self.__slot1),len(self.__slot2),len(self.__slot3)
     
 def render():
-    global camera_pos, min_x, max_x, min_y, max_y
-    x_offset = camera_pos[0] % grid_size
-    y_offset = camera_pos[1] % grid_size
+    global camera_pos, min_x, max_x, min_y, max_y, x_offset, y_offset
+    
     for x in range(-x_offset, screen_width + grid_size, grid_size):
         pygame.draw.line(screen, (255,255,255), (x, 0), (x, screen_height))
     for y in range(-y_offset, screen_height + grid_size, grid_size):
         pygame.draw.line(screen, (255,255,255), (0, y), (screen_width, y))
 
-    #dx and dy represent the change is grid pos
+    #dx and dy represent the shift of cells in view
     dx = camera_pos[0] // grid_size - min_x
     dy = camera_pos[1] // grid_size - min_y
 

@@ -116,8 +116,7 @@ if __name__ == '__main__':
             keys = pygame.key.get_pressed()
             mouse_buttons = pygame.mouse.get_pressed(num_buttons=3)
             mouse_pos = pygame.mouse.get_pos()
-            mouse_grid_world_pos = ((mouse_pos[0] + render.camera_pos[0])/render.grid_size,(mouse_pos[1] + render.camera_pos[1])/render.grid_size)
-            mouse_grid_local_pos = (mouse_pos[0]//render.grid_size, mouse_pos[1]//render.grid_size)
+            mouse_grid_world_pos = ((mouse_pos[0] + render.camera_pos[0])/render.grid_size,(mouse_pos[1] + render.camera_pos[1])/render.grid_size)#must be float for calc_slot_num()
 
             # Camera Movement
             # new x and y = cam pos to ensure that it is in sync
@@ -125,6 +124,8 @@ if __name__ == '__main__':
             elif keys[pygame.K_s]: render.camera_pos[1] += render.cam_speed
             if keys[pygame.K_a]: render.camera_pos[0] -= render.cam_speed
             elif keys[pygame.K_d]: render.camera_pos[0] += render.cam_speed
+            render.x_offset = render.camera_pos[0] % render.grid_size
+            render.y_offset = render.camera_pos[1] % render.grid_size
             render.render()
             
             #component menu
@@ -147,7 +148,7 @@ if __name__ == '__main__':
                     start.screen.blit(component_surfaces[component_selected_index],(mouse_pos[0],mouse_pos[1]))
                     if mouse_buttons[0]:
                         db.object_add(int(mouse_grid_world_pos[0]),int(mouse_grid_world_pos[1]),component_selected_index+1)
-                        render.obj_cache[mouse_grid_local_pos[0]].change_cell(mouse_grid_local_pos[1],component_selected_index+1)
+                        render.obj_cache[int(mouse_grid_world_pos[0]-render.min_x)].change_cell(int(mouse_grid_world_pos[1]-render.min_y),component_selected_index+1)
                         component_selected_index = None
                 elif component_selected_index == 7:
                     pass
@@ -157,8 +158,9 @@ if __name__ == '__main__':
                     start.screen.blit(component_surfaces[n],(padding + component_icon_top_x_point,component_icon_top_y_point))
 
             #gate option menu
-            mouse_cell_contains = db.object_load(mouse_pos[0],mouse_pos[1])
+            mouse_cell_contains = db.object_load(mouse_grid_world_pos[0],mouse_grid_world_pos[1])
             if mouse_cell_contains != 0 and mouse_buttons[2]:
+                print("object was found")
                 GUI.obj_option_menu.click()
             elif GUI.obj_option_menu.open_get() == True:
                 GUI.obj_option_menu.render()
