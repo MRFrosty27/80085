@@ -1,6 +1,10 @@
 import os,pygame
 from db import create_table_of_database_names
 
+"""
+This is where the starting procedure for the application is starts.
+"""
+
 #create folder where database files are stored 
 os.makedirs(os.path.join(os.path.dirname(__file__),"projects"),exist_ok=True )
 create_table_of_database_names()
@@ -8,7 +12,7 @@ create_table_of_database_names()
 # Set up display
 pygame.init()
 pygame.display.set_caption('Imagination')
-screen_width,screen_height = dim = pygame.display.get_desktop_sizes()[0]
+screen_width,screen_height = pygame.display.get_desktop_sizes()[0]
 screen = pygame.display.set_mode((screen_width,screen_height),pygame.NOFRAME)
 pygame.display.set_caption("Imagination")
 clock = pygame.time.Clock()

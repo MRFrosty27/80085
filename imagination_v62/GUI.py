@@ -9,9 +9,8 @@ min_width = 10
 y_padding = 10
 screen_width_20th = screen_width//20
 screen_height_20th = screen_height//20
-mpos = None 
 font_type = "Arial"
-font_size = screen_height//20
+font_size = screen_height//50
 font = pygame.font.SysFont(font_type, font_size)
 message_queue = []
 white = (255,255,255)
@@ -24,6 +23,8 @@ font_size_project_list = screen_height//50
 font_project_list = pygame.font.SysFont(font_type, font_size_project_list)
 project_list_dim = [screen_width * 0.5+border,font_size_project_list + screen_height_20th,screen_width * 0.5 - screen_height_20th, font_size_project_list*2 + screen_height_20th]#index 1 and 3 are calc during runtime. index 0 and 1 are positions and index 3 and 4 are distance
 del_x_pos = screen_width-screen_width_20th-font_size_project_list*2
+selected_component_grid_x_pos = None
+selected_component_grid_y_pos = None
 
 def message(text,duration):#duration is in seconds
     message_queue.append((text,duration*60))
@@ -74,8 +75,8 @@ class text_box:#used in main menu
             self.__static_surface.blit(text_surface,(min_width,y_padding))
     
     def hover(self):# Check if mouse is over the text box
-        if mpos is not None:
-            mouse_x, mouse_y = mpos
+        if mouse_pos is not None:
+            mouse_x, mouse_y = mouse_pos
             if (self.__x <= mouse_x <= self.__x + self.__width and 
                 self.__y <= mouse_y <= self.__y + self.__height):
                 self.__hover = True
@@ -198,22 +199,18 @@ class option_menu:
             self.__surface.blit(pygame.font.SysFont(font_type, font_size).render(f"{self.__option[n][0]}",True,(0,0,0)),(0,n*font_size))
 
     def render(self):
-        if self.__pos[0] == None or self.__pos[1] == None: raise TypeError(f'cannot render when self.__pos is nontype\nself__open: {self.open_get}')
-        else: screen.blit(self.__surface,(self.__pos[0],self.__pos[1]))
-
-    def option_execute(self,index):
-        exec(self.__option[index][1])
-
-    def open_get(self):
-        return self.__open
+        if self.__open:
+            if self.__pos[0] == None or self.__pos[1] == None: raise TypeError(f'cannot render when self.__pos is nontype\nself__open: {self.__open}')
+            else: screen.blit(self.__surface,(self.__pos[0],self.__pos[1]))
     
+    def set_open_to(self,to_bool):
+        if to_bool: self.__pos = mouse_pos
+        else: self.__pos = [None,None]
+        self.__open = to_bool
     def click(self):
-        if self.__open == False:
-            self.__open = True
-            self.__pos = mouse_pos
-        else:
+        if self.__open:
             if self.__pos[0] <= mouse_pos[0] <= self.__pos[0] + self.__surface.get_size()[0] and self.__pos[1] <= mouse_pos[1] <= self.__pos[1] + self.__surface.get_size()[1]:
-                top,bottom = self.__pos,self.__pos + font_size
+                top,bottom = self.__pos[0],self.__pos[0] + font_size
                 for option_number in range(len(self.__option)):
                     if top <= mouse_pos[1] <= bottom:
                         exec(self.__option[option_number][1])
@@ -221,9 +218,7 @@ class option_menu:
                     else: 
                         top += font_size
                         bottom += font_size
-            else:
-                self.__open = False
-                self.__pos = None
+        else: self.__pos[0],self.__pos[1] = mouse_pos
 
 #create option menus
 obj_option_menu = option_menu()

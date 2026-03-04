@@ -18,7 +18,8 @@ max_x = (camera_pos[0] + screen_width) // grid_size + 1
 min_y = camera_pos[1] // grid_size
 max_y = (camera_pos[1] + screen_height) // grid_size + 1
 
-def draw_cell(x, y, gate_type, camera_pos):
+def draw_cell(x, y, gate_type):
+    global camera_pos
     world_x = x * grid_size - camera_pos[0]
     world_y = y * grid_size - camera_pos[1]
     if 0 <= world_x < screen.get_width() and 0 <= world_y < screen.get_height():#only render cell if in view
@@ -261,7 +262,7 @@ def render():
             for y in range(len(obj_cache[x])):
                 if obj_cache[x][y] == 0:pass
                 else:
-                    draw_cell(min_x+x,min_y+y, obj_cache[x][y], camera_pos)
+                    draw_cell(min_x+x,min_y+y, obj_cache[x][y])
     
     for x in inteconnect_cache:
             x_index = 0

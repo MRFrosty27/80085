@@ -1,6 +1,10 @@
 import multiprocessing
 from multiprocessing import freeze_support
 
+"""
+TODO change all position arrays to just X and Y variable to eliminate the overhead of arrays
+"""
+
 def calc_slot_number():
     if mouse_grid_world_pos[0] - int(mouse_grid_world_pos[0]) < 0.5:
         if mouse_grid_world_pos[1] - int(mouse_grid_world_pos[1]) < 0.5: 
@@ -25,7 +29,7 @@ if __name__ == '__main__':
     component_menu_top = start.screen_height - (2*render.grid_size)#y cord for the top of the menu
     component_icon_top_y_point = component_menu_top+(render.grid_size//2)#y cord for the top of the component 
     component_selected_index = None#stores which component is selected for placement
-    component_surfaces = (GUI.AND_surface,GUI.OR_surface,GUI.NAND_surface,GUI.NOR_surface,GUI.XOR_surface,GUI.XNOR_surface,GUI.NOT_surface,GUI.interconnect_surface)
+    component_surfaces = (None,GUI.AND_surface,GUI.OR_surface,GUI.NAND_surface,GUI.NOR_surface,GUI.XOR_surface,GUI.XNOR_surface,GUI.NOT_surface,GUI.interconnect_surface)
     component_icon_gap = render.grid_size + render.grid_size//2
     first_interconnect_point_selected = False
     second_interconnect_point_selected = False
@@ -37,7 +41,7 @@ if __name__ == '__main__':
             start.screen.fill((0, 0, 0))
             
             keys = pygame.key.get_pressed()
-            GUI.mpos = mouse_pos = pygame.mouse.get_pos()
+            GUI.mouse_pos = mouse_pos = pygame.mouse.get_pos()
             mouse_buttons = pygame.mouse.get_pressed(num_buttons=3)
             #close setting menu
             if keys[pygame.K_ESCAPE]:
@@ -115,8 +119,11 @@ if __name__ == '__main__':
 
             keys = pygame.key.get_pressed()
             mouse_buttons = pygame.mouse.get_pressed(num_buttons=3)
-            mouse_pos = pygame.mouse.get_pos()
+            GUI.mouse_pos = mouse_pos = pygame.mouse.get_pos()
             mouse_grid_world_pos = ((mouse_pos[0] + render.camera_pos[0])/render.grid_size,(mouse_pos[1] + render.camera_pos[1])/render.grid_size)#must be float for calc_slot_num()
+            #mouse_grid_world_pos_remainder = [mouse_grid_world_pos[0]&1,mouse_grid_world_pos[1]&1]
+            mouse_grid_world_pos = (int(mouse_grid_world_pos[0]),int(mouse_grid_world_pos[1]))
+            mouse_grid_local_pos = int(mouse_grid_world_pos[0]-render.min_x),int(mouse_grid_world_pos[1]-render.min_y)
 
             # Camera Movement
             # new x and y = cam pos to ensure that it is in sync
@@ -135,35 +142,39 @@ if __name__ == '__main__':
             padding = start.screen_width*0.05
 
             if mouse_pos[1] > component_menu_top:#mouse within component menu
-                for n in range(len(component_surfaces)):
+                for n in range(1,len(component_surfaces)):
                     component_icon_top_x_point = n*component_icon_gap
                     start.screen.blit(component_surfaces[n],(padding + component_icon_top_x_point,component_icon_top_y_point))
                     if mouse_buttons[0] and component_icon_top_x_point <= mouse_pos[0] <= component_icon_top_x_point + render.grid_size and component_icon_top_y_point <= mouse_pos[1] <= component_icon_top_y_point + render.grid_size:
-                        component_selected_index = n-1
+                        component_selected_index = n
             elif component_selected_index != None:
-                for n in range(len(component_surfaces)):
+                for n in range(1,len(component_surfaces)):
                     component_icon_top_x_point = n*component_icon_gap
                     start.screen.blit(component_surfaces[n],(padding + component_icon_top_x_point,component_icon_top_y_point))
                 if 0 <= component_selected_index <= 6:#place selected component
                     start.screen.blit(component_surfaces[component_selected_index],(mouse_pos[0],mouse_pos[1]))
                     if mouse_buttons[0]:
-                        db.object_add(int(mouse_grid_world_pos[0]),int(mouse_grid_world_pos[1]),component_selected_index+1)
-                        render.obj_cache[int(mouse_grid_world_pos[0]-render.min_x)].change_cell(int(mouse_grid_world_pos[1]-render.min_y),component_selected_index+1)
+                        db.object_add(mouse_grid_world_pos[0],mouse_grid_world_pos[1],component_selected_index+1)
+                        render.obj_cache[mouse_grid_local_pos[0]].change_cell(mouse_grid_local_pos[1],component_selected_index+1)
                         component_selected_index = None
                 elif component_selected_index == 7:
                     pass
             else:
-                for n in range(len(component_surfaces)):
+                for n in range(1,len(component_surfaces)):
                     component_icon_top_x_point = n*component_icon_gap
                     start.screen.blit(component_surfaces[n],(padding + component_icon_top_x_point,component_icon_top_y_point))
 
             #gate option menu
-            mouse_cell_contains = db.object_load(mouse_grid_world_pos[0],mouse_grid_world_pos[1])
-            if mouse_cell_contains != 0 and mouse_buttons[2]:
-                print("object was found")
+            mouse_cell_contains = render.obj_cache[mouse_grid_local_pos[0]][mouse_grid_local_pos[1]]
+            if mouse_buttons[2]:
+                if mouse_cell_contains == 0: 
+                    GUI.obj_option_menu.set_open_to(False)
+                elif 1 <= mouse_cell_contains <= 7: 
+                    GUI.obj_option_menu.set_open_to(True)
+                    GUI.selected_component_grid_x_pos, GUI.selected_component_grid_x_pos = mouse_grid_local_pos
+            elif mouse_buttons[0]:
                 GUI.obj_option_menu.click()
-            elif GUI.obj_option_menu.open_get() == True:
-                GUI.obj_option_menu.render()
+            GUI.obj_option_menu.render()
 
             #interconnect option menu
             #render.process_pool.map(db.object_search_connected,[() for ])
@@ -175,10 +186,6 @@ if __name__ == '__main__':
                         inx,iny,outx,outy,inslot,outslot = interconnect
                         point_one = render.slot_coord(inx,iny,inslot)
                         point_two = render.slot_coord(outx,outy,outslot)
-
-            if mouse_pos[1] < component_menu_top:
-                if mouse_buttons[0]:
-                    pass
 
             pygame.display.flip()
             start.clock.tick(60)

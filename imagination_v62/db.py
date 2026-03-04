@@ -136,16 +136,19 @@ def interconnect_add(inx,iny,outx,outy,inslot,outslot):
     db_connection.commit()
 
 def object_add(X_cord,Y_cord,operation):#get called when a user adds a new gate 
-    syntax = f"""
-    INSERT INTO main (X_cord,Y_cord,operation) 
-    VALUES (?,?,?)
-    """
-    db_cursor.execute(syntax,(X_cord, Y_cord, operation))
-    db_connection.commit()
+    if object_load(X_cord,Y_cord) == 0:
+        add_syntax = f"""
+        INSERT INTO main (X_cord,Y_cord,operation) 
+        VALUES (?,?,?)
+        """
+        db_cursor.execute(add_syntax,(X_cord, Y_cord, operation))
+        db_connection.commit()
+    else:
+        object_update_operation(X_cord,Y_cord)
 
 def object_load(X_cord,Y_cord,parallelism = False):#gets called when GUI needs to know which gate to display
     if parallelism == False:
-        db_cursor.execute(f"SELECT * FROM main WHERE X_cord = ? AND Y_cord = ?;", (X_cord, Y_cord))
+        db_cursor.execute("SELECT * FROM main WHERE X_cord = ? AND Y_cord = ?;", (X_cord, Y_cord))
         result = db_cursor.fetchone()
         if result != None:
             return result[2]#output operation
@@ -159,13 +162,22 @@ def object_load(X_cord,Y_cord,parallelism = False):#gets called when GUI needs t
             return result[2]#output operation
         else:return None
 
-def object_update_cord(table,X_cord,Y_cord):#if the user moves gate to a diff pos
-    update_X = f"""
-    update {table}
+def object_update_cord(X_cord,Y_cord):#if the user moves gate to a diff pos
+    update_syntax = f"""
+    UPDATE main
     set X_cord = ? AND Y_cord = ?
     WHERE X_cord = ? AND Y_cord = ?;
     """
-    db_cursor.execute(update_X,(X_cord,Y_cord))
+    db_cursor.execute(update_syntax,(X_cord,Y_cord))
+    db_connection.commit()
+
+def object_update_operation(X_cord,Y_cord):
+    update_syntax = """
+    UPDATE main
+    set operation = ?
+    WHERE X_cord = ? AND Y_cord = ?;
+    """
+    db_cursor.execute(update_syntax,(X_cord,Y_cord))
     db_connection.commit()
 
 def object_search_connected(inx,iny):
