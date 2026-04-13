@@ -1,8 +1,8 @@
-import multiprocessing
-from multiprocessing import freeze_support
-
 """
 TODO change all position arrays to just X and Y variable to eliminate the overhead of arrays
+TODO improve GUI text_box class by adding inheritance, and spliting typable and static text boxes into child clases
+All exec() must be run in main.py
+all returns of a function must only be of one data type
 """
 
 def calc_slot_number():
@@ -20,9 +20,10 @@ def calc_slot_number():
 if __name__ == '__main__':
     #import non-multiprocessing libraries here
     #this ensures that only one window is created
-    import start,GUI,db, render, pygame
+    import start,GUI,db, render, pygame, multiprocessing
     from sys import exit
     from datetime import datetime
+    from multiprocessing import freeze_support
     freeze_support()  # is safe for Windoes,MacOS and others
 
     #component menu
@@ -30,7 +31,7 @@ if __name__ == '__main__':
     component_icon_top_y_point = component_menu_top+(render.grid_size//2)#y cord for the top of the component 
     component_selected_index = None#stores which component is selected for placement
     component_surfaces = (None,GUI.AND_surface,GUI.OR_surface,GUI.NAND_surface,GUI.NOR_surface,GUI.XOR_surface,GUI.XNOR_surface,GUI.NOT_surface,GUI.interconnect_surface)
-    component_icon_gap = render.grid_size + render.grid_size//2
+    component_icon_gap = render.grid_size * 1.5
     first_interconnect_point_selected = False
     second_interconnect_point_selected = False
     main_menu = True
@@ -43,16 +44,16 @@ if __name__ == '__main__':
             keys = pygame.key.get_pressed()
             GUI.mouse_pos = mouse_pos = pygame.mouse.get_pos()
             mouse_buttons = pygame.mouse.get_pressed(num_buttons=3)
-            #close setting menu
-            if keys[pygame.K_ESCAPE]:
+            #close setting menu or swap to project
+            if keys[pygame.K_ESCAPE] and db.db_name != None:
                 main_menu = False
                 project = True
                 break
             
             #text box
             if mouse_buttons[0]:
-                GUI.tb3.click()
-                GUI.tb4.click()
+                GUI.new_project_name_button.click()
+                exec(GUI.exit_button.click())
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -61,21 +62,22 @@ if __name__ == '__main__':
                         render.process_pool.join()
                     pygame.quit()
                     exit()
+                #tb3 text input interaction
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_BACKSPACE:
-                        GUI.tb3.input_remove()
+                        GUI.new_project_name_button.input_remove()
                     elif event.key == pygame.K_RETURN:
-                        if GUI.tb3.selected_get() == True and len(GUI.tb3.input_get())> 0:
+                        if GUI.new_project_name_button.selected_get() == True and len(GUI.new_project_name_button.input_get())> 0:
                             time = datetime.now().strftime("%Y-%m-%d ")
-                            db.project_create(GUI.tb3.input_get(),1*10^9,f"{time}",f"{time}",f"{time}")
-                            db.db_name = db.access_database(GUI.tb3.input_get())
+                            db.project_create(GUI.new_project_name_button.input_get(),1*10^9,f"{time}",f"{time}",f"{time}")
+                            db.db_name = db.access_database(GUI.new_project_name_button.input_get())
                             db.table_object_create()
                             db.table_interconnect_create()
-                            GUI.tb3.input_reset()
+                            GUI.new_project_name_button.input_reset()
                     elif event.unicode.isalnum():
-                        GUI.tb3.input_add(event.unicode)
-            GUI.tb3.render()
-            GUI.tb4.render()
+                        GUI.new_project_name_button.input_add(event.unicode)
+            GUI.new_project_name_button.render()
+            GUI.exit_button.render()
             #project list
 
             pygame.draw.rect(start.screen,GUI.white,(start.screen_width * 0.5, GUI.screen_height_20th, start.screen_width * 0.5 - GUI.screen_width_20th, start.screen_height - 2*GUI.screen_height_20th))
@@ -99,6 +101,8 @@ if __name__ == '__main__':
                                 main_menu = False
                                 break
                         else:
+                            if project_data[0] == db.db_name:
+                                db.db_name = None
                             db.project_delete(project_data[0])
                     start.screen.blit(GUI.font_project_list.render(f"{"DEL"}",True,GUI.plat),(GUI.del_x_pos,GUI.project_list_dim[1]))
                 n+=1 
@@ -108,7 +112,8 @@ if __name__ == '__main__':
 
         while project:
             start.screen.fill((0, 0, 0))
-            
+            keys = pygame.key.get_pressed()
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     if render.process_pool is not None:
@@ -116,13 +121,17 @@ if __name__ == '__main__':
                         render.process_pool.join()
                     pygame.quit()
                     exit()
-
-            keys = pygame.key.get_pressed()
+                elif keys[pygame.K_ESCAPE]:
+                    main_menu = True
+                    project = False
+                    break
+            
             mouse_buttons = pygame.mouse.get_pressed(num_buttons=3)
             GUI.mouse_pos = mouse_pos = pygame.mouse.get_pos()
             mouse_grid_world_pos = ((mouse_pos[0] + render.camera_pos[0])/render.grid_size,(mouse_pos[1] + render.camera_pos[1])/render.grid_size)#must be float for calc_slot_num()
-            #mouse_grid_world_pos_remainder = [mouse_grid_world_pos[0]&1,mouse_grid_world_pos[1]&1]
-            mouse_grid_world_pos = (int(mouse_grid_world_pos[0]),int(mouse_grid_world_pos[1]))
+            #word refers to the entire project grid space
+            #local refers to only the gridspace with the users window/screen
+            mouse_grid_world_pos_int = (int(mouse_grid_world_pos[0]),int(mouse_grid_world_pos[1]))
             mouse_grid_local_pos = int(mouse_grid_world_pos[0]-render.min_x),int(mouse_grid_world_pos[1]-render.min_y)
 
             # Camera Movement
@@ -139,30 +148,33 @@ if __name__ == '__main__':
             #gate and interconnect placement
             pygame.draw.rect(start.screen,(255,255,255),(0,component_menu_top,start.screen_width,start.screen_height))
             pygame.draw.line(start.screen,(200,250,250),(0,component_menu_top),(start.screen_width,component_menu_top))
-            padding = start.screen_width*0.05
 
-            if mouse_pos[1] > component_menu_top:#mouse within component menu
-                for n in range(1,len(component_surfaces)):
-                    component_icon_top_x_point = n*component_icon_gap
-                    start.screen.blit(component_surfaces[n],(padding + component_icon_top_x_point,component_icon_top_y_point))
-                    if mouse_buttons[0] and component_icon_top_x_point <= mouse_pos[0] <= component_icon_top_x_point + render.grid_size and component_icon_top_y_point <= mouse_pos[1] <= component_icon_top_y_point + render.grid_size:
-                        component_selected_index = n
-            elif component_selected_index != None:
-                for n in range(1,len(component_surfaces)):
-                    component_icon_top_x_point = n*component_icon_gap
-                    start.screen.blit(component_surfaces[n],(padding + component_icon_top_x_point,component_icon_top_y_point))
-                if 0 <= component_selected_index <= 6:#place selected component
-                    start.screen.blit(component_surfaces[component_selected_index],(mouse_pos[0],mouse_pos[1]))
-                    if mouse_buttons[0]:
-                        db.object_add(mouse_grid_world_pos[0],mouse_grid_world_pos[1],component_selected_index+1)
-                        render.obj_cache[mouse_grid_local_pos[0]].change_cell(mouse_grid_local_pos[1],component_selected_index+1)
+            # Draw component icons (always drawn when not placing)
+            for n in range(1, len(component_surfaces)):
+                component_icon_x_pos = n * component_icon_gap
+                start.screen.blit(component_surfaces[n], (component_icon_x_pos, component_icon_top_y_point))
+
+                # Check for click only when mouse is in the component menu
+                if mouse_buttons[0] and mouse_pos[1] > component_menu_top and component_icon_x_pos <= mouse_pos[0] <= component_icon_x_pos + render.grid_size and component_icon_top_y_point <= mouse_pos[1] <= component_icon_top_y_point + render.grid_size:
+                    component_selected_index = n
+
+            # Handle placing the selected component
+            if component_selected_index is not None:
+                if 1 <= component_selected_index <= 7:  # Valid placeable component
+                    # Preview the component at mouse position
+                    start.screen.blit(component_surfaces[component_selected_index], mouse_pos)
+                    
+                    if mouse_buttons[0] and mouse_pos[1] < component_menu_top: 
+                        # Place the component
+                        db.object_add(
+                            mouse_grid_world_pos_int[0],
+                            mouse_grid_world_pos_int[1],
+                            component_selected_index + 1)
+                        render.obj_cache[mouse_grid_local_pos[0]][mouse_grid_local_pos[1]] = component_selected_index + 1
                         component_selected_index = None
+                
                 elif component_selected_index == 7:
-                    pass
-            else:
-                for n in range(1,len(component_surfaces)):
-                    component_icon_top_x_point = n*component_icon_gap
-                    start.screen.blit(component_surfaces[n],(padding + component_icon_top_x_point,component_icon_top_y_point))
+                    start.screen.blit(component_surfaces[n], (component_icon_x_pos, component_icon_top_y_point))
 
             #gate option menu
             mouse_cell_contains = render.obj_cache[mouse_grid_local_pos[0]][mouse_grid_local_pos[1]]
@@ -171,9 +183,14 @@ if __name__ == '__main__':
                     GUI.obj_option_menu.set_open_to(False)
                 elif 1 <= mouse_cell_contains <= 7: 
                     GUI.obj_option_menu.set_open_to(True)
-                    GUI.selected_component_grid_x_pos, GUI.selected_component_grid_x_pos = mouse_grid_local_pos
-            elif mouse_buttons[0]:
-                GUI.obj_option_menu.click()
+                    GUI.selected_component_grid_x_pos, GUI.selected_component_grid_y_pos = mouse_grid_local_pos[0],mouse_grid_local_pos[1]
+            elif mouse_buttons[0]:#issue-executes exec() when left click
+                try:
+                    exec(GUI.obj_option_menu.click())
+                except:
+                    pass
+            elif keys[pygame.K_w] or keys[pygame.K_2] or keys[pygame.K_a] or keys[pygame.K_d]:
+                GUI.obj_option_menu.set_open_to(False)
             GUI.obj_option_menu.render()
 
             #interconnect option menu

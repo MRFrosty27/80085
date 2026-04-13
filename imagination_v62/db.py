@@ -167,6 +167,7 @@ def object_update_cord(X_cord,Y_cord):#if the user moves gate to a diff pos
     UPDATE main
     set X_cord = ? AND Y_cord = ?
     WHERE X_cord = ? AND Y_cord = ?;
+    VALUES (?,?)
     """
     db_cursor.execute(update_syntax,(X_cord,Y_cord))
     db_connection.commit()
@@ -176,6 +177,7 @@ def object_update_operation(X_cord,Y_cord):
     UPDATE main
     set operation = ?
     WHERE X_cord = ? AND Y_cord = ?;
+    VALUES (?,?)
     """
     db_cursor.execute(update_syntax,(X_cord,Y_cord))
     db_connection.commit()

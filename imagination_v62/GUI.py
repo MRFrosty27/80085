@@ -1,4 +1,4 @@
-import pygame
+import pygame,db
 from start import screen,screen_width,screen_height
 from render import grid_size
 
@@ -30,7 +30,6 @@ def message(text,duration):#duration is in seconds
     message_queue.append((text,duration*60))
 
 class text_box:#used in main menu
-
     def __init__(self, x, y, text,code,typeable):
         # Type checking
         if not isinstance(x, int):
@@ -52,12 +51,12 @@ class text_box:#used in main menu
             if not isinstance(typeable,bool):
                 raise TypeError("code must be a bool")
             self.__typeable = typeable
-            self.__selected = False#marks when the user can type
+            self.__selected = False
             self.__input = ''
         else:#becomes static
             if not isinstance(code, str):
                 raise TypeError("code must be a string")
-            self.__code_click = code
+            self.__code = code
             text_surface = font.render(self.__text, True, (0, 0, 0))
             text_width, text_height = text_surface.get_size()
 
@@ -82,7 +81,6 @@ class text_box:#used in main menu
                 self.__hover = True
             else: 
                 self.__hover = False
-
 
     def render(self):
         # Draw the text box
@@ -124,7 +122,8 @@ class text_box:#used in main menu
 
     def click(self):
         if self.__typeable == False:
-            exec(self.__code_click)
+            if self.__hover: return self.__code
+            else: return ''
         else:
             if self.__hover:
                 self.__selected = True
@@ -184,16 +183,22 @@ class text_box:#used in main menu
 class option_menu:
     def __init__(self):
         self.__option = []#format: title,function
-        surface = pygame.Surface((screen_width_20th,1))
-        surface.fill((255,255,255))
+        surface = pygame.Surface((1,1))
+        surface.fill(white)
         self.__surface = surface
         self.__open = False
         self.__pos = [None,None]
 
     def option_add(self,title,function):
-        if not isinstance(title, str) and not isinstance(function, str): return print('can not add option: option title or function not string type')
+        if not isinstance(title, str) and not isinstance(function, str): return print('can not add option: option title or function is not string type')
         self.__option.append((title,function))
-        self.__surface = pygame.Surface((screen_width_20th,len(self.__option) * font_size))
+        longest_text_len = 0
+        for text,func in self.__option:
+            if len(text) > 20:
+                raise ValueError(f'Option {text} is too long')
+            elif len(text) > longest_text_len:
+                longest_text_len = len(text)
+        self.__surface = pygame.Surface((screen_width_20th*2,len(self.__option) * font_size))
         self.__surface.fill((255,255,255))
         for n in range(len(self.__option)):
             self.__surface.blit(pygame.font.SysFont(font_type, font_size).render(f"{self.__option[n][0]}",True,(0,0,0)),(0,n*font_size))
@@ -207,31 +212,41 @@ class option_menu:
         if to_bool: self.__pos = mouse_pos
         else: self.__pos = [None,None]
         self.__open = to_bool
+
     def click(self):
         if self.__open:
             if self.__pos[0] <= mouse_pos[0] <= self.__pos[0] + self.__surface.get_size()[0] and self.__pos[1] <= mouse_pos[1] <= self.__pos[1] + self.__surface.get_size()[1]:
-                top,bottom = self.__pos[0],self.__pos[0] + font_size
                 for option_number in range(len(self.__option)):
+                    top,bottom = self.__pos[0] * (font_size * option_number),self.__pos[0] * (font_size*(option_number+1))
                     if top <= mouse_pos[1] <= bottom:
-                        exec(self.__option[option_number][1])
-                        break
+                        self.set_open_to(False)
+                        return self.__option[option_number][1]
                     else: 
                         top += font_size
                         bottom += font_size
-        else: self.__pos[0],self.__pos[1] = mouse_pos
+        else: return ""
 
 #create option menus
 obj_option_menu = option_menu()
-obj_option_menu.option_add('Remove component',"""
-db.object_remove(x,y)
-""")
 interconnect_option_menu = option_menu()
+obj_option_menu.option_add('Remove component',"""
+db.object_remove(GUI.selected_component_grid_x_pos, GUI.selected_component_grid_y_pos)
+render.obj_cache[mouse_grid_local_pos[0]][mouse_grid_local_pos[1]] = 0
+render.inteconnect_cache[mouse_grid_local_pos[0]][mouse_grid_local_pos[1]] = None
+""")
 interconnect_option_menu.option_add('Remove',"""
-db.interconnect_remove(x,y)
+db.interconnect_remove(selected_component_grid_x_pos, selected_component_grid_y_pos)\n
+#render.inteconnect_cache[mouse_grid_local_pos[0]][[mouse_grid_local_pos[1]]] = None
 """)
 
-tb3 = text_box(screen_width_20th,screen_height_20th,"New project name",'',True)
-tb4 = text_box(screen_width_20th,screen_height_20th + (font_size * 3//2),"Exit",'',False)
+new_project_name_button = text_box(screen_width_20th,screen_height_20th,"New project name",'',True)
+exit_button = text_box(screen_width_20th,screen_height_20th + (font_size * 3//2),"Exit","""
+if render.process_pool is not None:
+    render.process_pool.close()
+    render.process_pool.join()
+pygame.quit()
+exit()
+""",False)
 
 AND_surface = pygame.Surface((grid_size,grid_size))
 AND_surface.fill(white)

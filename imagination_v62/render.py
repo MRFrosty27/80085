@@ -12,7 +12,7 @@ camera_pos = [0, 0]
 x_offset = None
 y_offset = None
 cam_speed = 5
-grid_size=screen_height//20
+grid_size=screen_height//50
 min_x = camera_pos[0] // grid_size
 max_x = (camera_pos[0] + screen_width) // grid_size + 1
 min_y = camera_pos[1] // grid_size
@@ -20,17 +20,19 @@ max_y = (camera_pos[1] + screen_height) // grid_size + 1
 
 def draw_cell(x, y, gate_type):
     global camera_pos
-    world_x = x * grid_size - camera_pos[0]
-    world_y = y * grid_size - camera_pos[1]
-    if 0 <= world_x < screen.get_width() and 0 <= world_y < screen.get_height():#only render cell if in view
+    local_x = x * grid_size - camera_pos[0]
+    local_y = y * grid_size - camera_pos[1]
+    if 0 <= local_x < screen.get_width() and 0 <= local_y < screen.get_height():#only render cell if in view
+        if 
         cell = pygame.Surface((grid_size,grid_size))
         cell.fill((255,255,255))
         font = pygame.font.SysFont('Arial', grid_size//2)
         cell.blit((font.render(('None','AND','OR','NAND','NOR','XOR','XNOR','NOT')[gate_type], True, (0,0,0))),(grid_size//4,grid_size//4))
-        screen.blit(cell,(world_x, world_y))
-        screen.blit(cell, (world_x, world_y))
+        screen.blit(cell,(local_x, local_y))
+        screen.blit(cell, (local_x, local_y))
 
 def slot_coord(x,y,slot_code):#only used in calc the path of an interconnect
+    #x and y use grid pos
     if slot_code == 0:
         slot_x = x * grid_size - camera_pos[0] + (grid_size/4)
         slot_y = y * grid_size - camera_pos[0] + (grid_size/4)
@@ -49,6 +51,7 @@ def slot_coord(x,y,slot_code):#only used in calc the path of an interconnect
         return slot_x,slot_y
 
 class obj_y_cloumn:
+    # data types- int, None
     def __init__(self):
         self.__array = array.array('L',[])#signed long long
     
@@ -63,7 +66,7 @@ class obj_y_cloumn:
         for y in range(min_y, max_y):
             self.__array.append(object_load(x,y))
 
-    def change_cell(self,y,gate_type):
+    def __setitem__(self,y,gate_type):
         self.__array[y] = gate_type
 
     def render_up(self,x,y):
@@ -88,45 +91,59 @@ class obj_y_cloumn:
         return len(self.__array)
     
 class interconnect_y_cloumn:
-    def __init__(self):#format outx,outy,outslot
+    def __init__(self):
+        #format outx,outy,outslot
+        #access path interconnect_cache -> interconnect_column -> slot -> index
+        #assignment path interconnect_cache -> interconnect_column -> index, slot
+        """
         self.__slot0 = array.array('L',[])
         self.__slot1 = array.array('L',[])
         self.__slot2 = array.array('L',[])
         self.__slot3 = array.array('L',[])
-    
-    def __len__(self):
-        return array.array('H',[len(self.__slot0),len(self.__slot1),len(self.__slot2),len(self.__slot3)])
+        """
+        #temp use
+        self.__slot0 = []
+        self.__slot1 = []
+        self.__slot2 = []
+        self.__slot3 = []
     
     def __append__(self,inslot,outx,outy,outslot):#slot: 0-top left, 1-top right, 2-bottom left, 3-bottom right
-        if isinstance(inslot,int) == False: raise Warning('inslot is not int type')
-        elif isinstance(outx,int) == False: raise Warning('outx is not int type')
-        elif isinstance(outy,int) == False: raise Warning('outy is not int type')
-        elif isinstance(outslot,int) == False: raise Warning('outslot is not int type')
-        if inslot == 0:
-            self.__slot0.append(outx,outy,outslot)
-            self.__slot1.append(None)
-            self.__slot2.append(None)
-            self.__slot3.append(None)
-        elif inslot == 1:
-            self.__slot1.append(outx,outy,outslot)
-            self.__slot0.append(None)
-            self.__slot2.append(None)
-            self.__slot3.append(None)
-        elif inslot == 2:
-            self.__slot2.append(outx,outy,outslot)
-            self.__slot0.append(None)
-            self.__slot1.append(None)
-            self.__slot3.append(None)
-        elif inslot == 3:
-            self.__slot3.append(outx,outy,outslot)
+        if inslot == None:
             self.__slot0.append(None)
             self.__slot1.append(None)
             self.__slot2.append(None)
+            self.__slot3.append(None)
+        else:
+            if isinstance(inslot,int) == False: raise Warning('inslot is not int type')
+            elif isinstance(outx,int) == False: raise Warning('outx is not int type')
+            elif isinstance(outy,int) == False: raise Warning('outy is not int type')
+            elif isinstance(outslot,int) == False: raise Warning('outslot is not int type')
+            elif inslot == 0:
+                self.__slot0.append(outx,outy,outslot)
+                self.__slot1.append(None)
+                self.__slot2.append(None)
+                self.__slot3.append(None)
+            elif inslot == 1:
+                self.__slot1.append(outx,outy,outslot)
+                self.__slot0.append(None)
+                self.__slot2.append(None)
+                self.__slot3.append(None)
+            elif inslot == 2:
+                self.__slot2.append(outx,outy,outslot)
+                self.__slot0.append(None)
+                self.__slot1.append(None)
+                self.__slot3.append(None)
+            elif inslot == 3:
+                self.__slot3.append(outx,outy,outslot)
+                self.__slot0.append(None)
+                self.__slot1.append(None)
+                self.__slot2.append(None)
     
     def load_path(self,x,y):
         if object_search_connected(x,y) is not None:
                 inx,iny,outx,outy,inslot,outslot = object_search_connected(x,y)
                 self.__append__(inslot,outx,outy,outslot)
+        else: self.__append__(None,None,None,None)
 
     def remove_path(self,x,y):
         pass
@@ -192,15 +209,38 @@ class interconnect_y_cloumn:
                 self.__slot3.append(None)
         else: raise TypeError("arg x or y type not int")
 
-    def __getitem__(self, index):
-        if index == 0:
-            return self.__slot0
-        elif index == 1:
-            return self.__slot1
-        elif index == 2:
-            return self.__slot2
-        elif index == 3:
-            return self.__slot3
+    def __getitem__(self,slot):
+        if 0 <= slot <= 3:
+            if slot == 0:
+                return self.__slot0
+            elif slot == 1:
+                return self.__slot1
+            elif slot == 2:
+                return self.__slot2
+            elif slot == 3:
+                return self.__slot3
+        else: raise TypeError('slot arg is not supported')
+
+    def __setitem__(self, key, value):
+    
+        if isinstance(key, tuple):
+            index, slot = key
+            if slot == 0:
+                self.__slot0[index] = value
+            elif slot == 1:
+                self.__slot1[index] = value
+            elif slot == 2:
+                self.__slot2[index] = value
+            elif slot == 3:
+                self.__slot3[index] = value
+            else:
+                raise IndexError(f"Slot must be 0-3, got {slot}")
+        else:
+            # Set all slots
+            self.__slot0[key] = value
+            self.__slot1[key] = value
+            self.__slot2[key] = value
+            self.__slot3[key] = value
     
     def __len__(self):
         return len(self.__slot0),len(self.__slot1),len(self.__slot2),len(self.__slot3)
@@ -216,7 +256,7 @@ def render():
     #dx and dy represent the shift of cells in view
     dx = camera_pos[0] // grid_size - min_x
     dy = camera_pos[1] // grid_size - min_y
-
+    
     min_x = camera_pos[0] // grid_size
     max_x = (camera_pos[0] + screen_width) // grid_size
     min_y = camera_pos[1] // grid_size
@@ -264,32 +304,24 @@ def render():
                 else:
                     draw_cell(min_x+x,min_y+y, obj_cache[x][y])
     
-    for x in inteconnect_cache:
+    for interconnect_column in inteconnect_cache:
             x_index = 0
             y_index = 0
-            for y in x[0]:#access slot 1 in each col
-                if inteconnect_cache[x][y] != None:
-                    from_point = slot_coord(min_x+x_index,min_y+y_index,0)
-                    to_point = slot_coord(inteconnect_cache[x][0][x_index],inteconnect_cache[x][y_index],0)
-                    pygame.draw.line(screen,(255,255,255),from_point,to_point)
+            for interconnect in interconnect_column[0]:#access slot 0 in each col
+                if interconnect != None:
+                    pygame.draw.line(screen,(255,255,255),slot_coord(min_x+x_index,min_y+y_index,0),slot_coord(interconnect[0],interconnect[1],interconnect[3]))
                 y_index += 1
-            for y in x[1]:#access slot 2 in each col
-                if inteconnect_cache[x][y] != None:
-                    from_point = slot_coord(min_x+x_index,min_y+y_index,1)
-                    to_point = slot_coord(inteconnect_cache[x][0][x_index],inteconnect_cache[x][y_index],1)
-                    pygame.draw.line(screen,(255,255,255),from_point,to_point)
+            for interconnect in interconnect_column[1]:#access slot 1 in each col
+                if interconnect != None:
+                    pygame.draw.line(screen,(255,255,255),slot_coord(min_x+x_index,min_y+y_index,1),slot_coord(interconnect[0],interconnect[1],interconnect[3]))
                 y_index += 1
-            for y in x[2]:#access slot 3 in each col
-                if inteconnect_cache[x][y] != None:
-                    from_point = slot_coord(min_x+x_index,min_y+y_index,2)
-                    to_point = slot_coord(inteconnect_cache[x][0][x_index],inteconnect_cache[x][y_index],2)
-                    pygame.draw.line(screen,(255,255,255),from_point,to_point)
+            for interconnect in interconnect_column[2]:#access slot 2 in each col
+                if interconnect != None:
+                    pygame.draw.line(screen,(255,255,255),slot_coord(min_x+x_index,min_y+y_index,2),slot_coord(interconnect[0],interconnect[1],interconnect[3]))
                 y_index += 1
-            for y in x[3]:#access slot 4 in each col
-                if inteconnect_cache[x][y] != None:
-                    from_point = slot_coord(min_x+x_index,min_y+y_index,3)
-                    to_point = slot_coord(inteconnect_cache[x][0][x_index],inteconnect_cache[x][y_index],3)
-                    pygame.draw.line(screen,(255,255,255),from_point,to_point)
+            for interconnect in interconnect_column[3]:#access slot 3 in each col
+                if interconnect != None:
+                    pygame.draw.line(screen,(255,255,255),slot_coord(min_x+x_index,min_y+y_index,3),slot_coord(interconnect[0],interconnect[1],interconnect[3]))
                 y_index += 1
             x_index += 1
 
