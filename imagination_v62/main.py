@@ -3,19 +3,21 @@ TODO change all position arrays to just X and Y variable to eliminate the overhe
 TODO improve GUI text_box class by adding inheritance, and spliting typable and static text boxes into child clases
 All exec() must be run in main.py
 all returns of a function must only be of one data type
+word refers to the entire project grid space
+local refers to only the gridspace with the users window/screen
 """
 
 def calc_slot_number():
     if mouse_grid_world_pos[0] - int(mouse_grid_world_pos[0]) < 0.5:
         if mouse_grid_world_pos[1] - int(mouse_grid_world_pos[1]) < 0.5: 
-            pass
+            return 0
         else:
-            pass
+            return 1
     else:
         if mouse_grid_world_pos[1] - int(mouse_grid_world_pos[1]) < 0.5: 
-            pass
+            return 2
         else:
-            pass
+            return 3
 
 if __name__ == '__main__':
     #import non-multiprocessing libraries here
@@ -32,8 +34,6 @@ if __name__ == '__main__':
     component_selected_index = None#stores which component is selected for placement
     component_surfaces = (None,GUI.AND_surface,GUI.OR_surface,GUI.NAND_surface,GUI.NOR_surface,GUI.XOR_surface,GUI.XNOR_surface,GUI.NOT_surface,GUI.interconnect_surface)
     component_icon_gap = render.grid_size * 1.5
-    first_interconnect_point_selected = False
-    second_interconnect_point_selected = False
     main_menu = True
     project = False
 
@@ -129,10 +129,18 @@ if __name__ == '__main__':
             mouse_buttons = pygame.mouse.get_pressed(num_buttons=3)
             GUI.mouse_pos = mouse_pos = pygame.mouse.get_pos()
             mouse_grid_world_pos = ((mouse_pos[0] + render.camera_pos[0])/render.grid_size,(mouse_pos[1] + render.camera_pos[1])/render.grid_size)#must be float for calc_slot_num()
-            #word refers to the entire project grid space
-            #local refers to only the gridspace with the users window/screen
             mouse_grid_world_pos_int = (int(mouse_grid_world_pos[0]),int(mouse_grid_world_pos[1]))
             mouse_grid_local_pos = int(mouse_grid_world_pos[0]-render.min_x),int(mouse_grid_world_pos[1]-render.min_y)
+            #interconnect points format- x,y,slot num
+            interconnect_from_point = None,None, None
+            interconnect_to_point = None,None, None
+            try:
+                mouse_cell_contains = render.obj_cache[mouse_grid_local_pos[0]][mouse_grid_local_pos[1]]
+            except:
+                print('there was an issue with accessing obj_cache')
+                print(f'obj_cache col len: {render.obj_cache[mouse_grid_local_pos[0]]}')
+                print(f'tried accesses index {mouse_grid_local_pos[1]}')
+                mouse_cell_contains = None
 
             # Camera Movement
             # new x and y = cam pos to ensure that it is in sync
@@ -161,7 +169,7 @@ if __name__ == '__main__':
             # Handle placing the selected component
             if component_selected_index is not None:
                 if 1 <= component_selected_index <= 7:  # Valid placeable component
-                    # Preview the component at mouse position
+                    render.display_slots = False
                     start.screen.blit(component_surfaces[component_selected_index], mouse_pos)
                     
                     if mouse_buttons[0] and mouse_pos[1] < component_menu_top: 
@@ -173,18 +181,27 @@ if __name__ == '__main__':
                         render.obj_cache[mouse_grid_local_pos[0]][mouse_grid_local_pos[1]] = component_selected_index + 1
                         component_selected_index = None
                 
-                elif component_selected_index == 7:
+                elif component_selected_index == 8:
                     start.screen.blit(component_surfaces[n], (component_icon_x_pos, component_icon_top_y_point))
+                    render.display_slots = True
+                    if mouse_cell_contains and mouse_buttons[0]:
+                        if interconnect_from_point == None:
+                            interconnect_from_point = mouse_grid_world_pos_int[0], mouse_grid_world_pos_int[1], calc_slot_number()
+                        elif interconnect_to_point == None and mouse_grid_world_pos_int[0] != interconnect_from_point[0] and mouse_grid_world_pos_int[1] != interconnect_from_point[1]:
+                            #pygame.draw.line(start.screen,(255,55,55),(interconnect_from_point[0],interconnect_from_point[1]),)
+                            interconnect_to_point = mouse_grid_world_pos_int[0], mouse_grid_world_pos_int[1], calc_slot_number()
+                        else: db.interconnect_add(interconnect_from_point[0],interconnect_from_point[1],interconnect_from_point[2],interconnect_to_point[0],interconnect_to_point[1],interconnect_to_point[2])
+
+            else: render.display_slots = False
 
             #gate option menu
-            mouse_cell_contains = render.obj_cache[mouse_grid_local_pos[0]][mouse_grid_local_pos[1]]
             if mouse_buttons[2]:
                 if mouse_cell_contains == 0: 
                     GUI.obj_option_menu.set_open_to(False)
                 elif 1 <= mouse_cell_contains <= 7: 
                     GUI.obj_option_menu.set_open_to(True)
                     GUI.selected_component_grid_x_pos, GUI.selected_component_grid_y_pos = mouse_grid_local_pos[0],mouse_grid_local_pos[1]
-            elif mouse_buttons[0]:#issue-executes exec() when left click
+            elif mouse_buttons[0]:
                 try:
                     exec(GUI.obj_option_menu.click())
                 except:

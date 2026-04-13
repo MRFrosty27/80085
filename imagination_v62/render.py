@@ -17,19 +17,31 @@ min_x = camera_pos[0] // grid_size
 max_x = (camera_pos[0] + screen_width) // grid_size + 1
 min_y = camera_pos[1] // grid_size
 max_y = (camera_pos[1] + screen_height) // grid_size + 1
+display_slots = False
 
 def draw_cell(x, y, gate_type):
     global camera_pos
     local_x = x * grid_size - camera_pos[0]
     local_y = y * grid_size - camera_pos[1]
     if 0 <= local_x < screen.get_width() and 0 <= local_y < screen.get_height():#only render cell if in view
-        if 
-        cell = pygame.Surface((grid_size,grid_size))
-        cell.fill((255,255,255))
-        font = pygame.font.SysFont('Arial', grid_size//2)
-        cell.blit((font.render(('None','AND','OR','NAND','NOR','XOR','XNOR','NOT')[gate_type], True, (0,0,0))),(grid_size//4,grid_size//4))
-        screen.blit(cell,(local_x, local_y))
-        screen.blit(cell, (local_x, local_y))
+        if display_slots :
+            cell = pygame.Surface((grid_size,grid_size))
+            cell.fill((255,255,255))
+            font = pygame.font.SysFont('Arial', cell.get_width()//2)
+            cell.blit((font.render(('None','AND','OR','NAND','NOR','XOR','XNOR','NOT')[gate_type], True, (0,0,0))),(cell.get_width()//4,cell.get_height()//4))
+            pygame.draw.circle(cell,(50,50,50),(cell.get_width()//4,cell.get_height()//4),grid_size//8)
+            pygame.draw.circle(cell,(50,50,50),(cell.get_width()//4,cell.get_height()//4*3),grid_size//8)
+            pygame.draw.circle(cell,(50,50,50),(cell.get_width()//4*3,cell.get_height()//4),grid_size//8)
+            pygame.draw.circle(cell,(50,50,50),(cell.get_width()//4*3,cell.get_height()//4*3),grid_size//8)
+            screen.blit(cell,(local_x, local_y))
+            screen.blit(cell, (local_x, local_y))
+        else:
+            cell = pygame.Surface((grid_size,grid_size))
+            cell.fill((255,255,255))
+            font = pygame.font.SysFont('Arial', grid_size//2)
+            cell.blit((font.render(('None','AND','OR','NAND','NOR','XOR','XNOR','NOT')[gate_type], True, (0,0,0))),(grid_size//4,grid_size//4))
+            screen.blit(cell,(local_x, local_y))
+            screen.blit(cell, (local_x, local_y))
 
 def slot_coord(x,y,slot_code):#only used in calc the path of an interconnect
     #x and y use grid pos
@@ -51,7 +63,7 @@ def slot_coord(x,y,slot_code):#only used in calc the path of an interconnect
         return slot_x,slot_y
 
 class obj_y_cloumn:
-    # data types- int, None
+    # data type- int
     def __init__(self):
         self.__array = array.array('L',[])#signed long long
     
